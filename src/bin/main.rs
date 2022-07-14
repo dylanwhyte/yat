@@ -27,7 +27,7 @@ fn main() -> Result<()> {
             ("audio_out".to_string(), Arc::new(RwLock::new(None))),
         ]),
         |flt: &Filter, _timee: f64| {
-            let _cut_off = flt. read_in_port_value("cut_off").unwrap();
+            let _cut_off = flt.read_in_port_value("cut_off").unwrap();
             let audio_in = flt.read_in_port_value("audio_in").unwrap();
 
             flt.write_out_port_value("audio_out", Some(audio_in));

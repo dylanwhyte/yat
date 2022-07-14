@@ -22,7 +22,11 @@ pub struct IoModule {
 
 impl IoModule {
     /// Create a new, unordered IoModule
-    fn new(id: String, in_ports: HashMap<String, IoPort>, out_ports: HashMap<String, IoPort>) -> Self {
+    pub fn new(
+        id: String,
+        in_ports: HashMap<String, IoPort>,
+        out_ports: HashMap<String, IoPort>
+    ) -> Self {
         let order = None;
 
         Self {
