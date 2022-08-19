@@ -36,6 +36,8 @@ pub trait IoModuleTrait {
 
     /// Set the modules processing order
     fn set_module_order(&mut self, new_order: Option<u64>);
+
+    fn process_inputs(&mut self);
 }
 
 

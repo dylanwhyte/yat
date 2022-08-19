@@ -2,9 +2,10 @@
 use std::sync::{Arc, RwLock};
 use std::fmt;
 
+pub type SampleType = f32;
+pub const SAMPLE_RATE: u32 = 44100;
 pub type IoPort = Arc<RwLock<Option<SampleType>>>;
-pub type SampleType = f64;
-pub type Result<T> = std::result::Result<T, ModuleNotFoundError>;
+pub type ModuleResult<T> = std::result::Result<T, ModuleNotFoundError>;
 
 #[derive(Debug, Clone)]
 pub struct ModuleNotFoundError;

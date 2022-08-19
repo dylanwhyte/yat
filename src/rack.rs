@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::io_module_trait::IoModuleTrait;
 use crate::io_module::IoModule;
-use crate::types::ModuleNotFoundError;
+use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
@@ -14,6 +14,7 @@ pub struct Rack {
     //module_chain: HashMap<u64, Vec<String>>,
     module_chain: HashMap<u64, HashSet<String>>,
     //module_chain: Vec<String>,
+    time: SampleType,
 }
 
 impl Rack {
@@ -22,16 +23,23 @@ impl Rack {
         let modules = HashMap::new();
         let module_chain = HashMap::new();
         //let module_chain = Vec::new();
+        let time = 0.0;
 
         Self {
             modules,
             module_chain,
+            time,
         }
     }
 
     /// Add a new module to the Rack
     pub fn add_module(&mut self, module: Box<dyn IoModuleTrait>) {
         self.modules.insert(module.get_id().clone(), module);
+    }
+
+    pub fn add_audio_output(&mut self, audio_out: IoModule) {
+        // TODO
+
     }
 
     /// Remove a module from the Rack
@@ -178,6 +186,26 @@ impl Rack {
             }
         }
     }
+
+    pub fn process_module_chain(&mut self) {
+        let time_delta = 1.0 / (SAMPLE_RATE as SampleType);
+
+        // FIXME: read 'order' in ascending order, e.g. for 1..order_max
+        for (order, modules) in self.module_chain.iter() {
+            for module in modules {
+                println!("processing: {}", module);
+                let module = &mut *self.modules.get_mut(module).unwrap();
+                module.process_inputs();
+            }
+        }
+        if self.time >= 1.0 {
+            //*current_time -= 1.0;
+            self.time = 0.0;
+        } else {
+            self.time += time_delta;
+        }
+    }
+
 }
 
 

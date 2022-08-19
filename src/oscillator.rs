@@ -18,13 +18,11 @@ pub struct Oscillator {
     /// The module's output ports
     out_ports: HashMap<String, IoPort>,
 
-    /// Process inputs and write outputs
-    process_fn: fn(&Oscillator, time: f64),
 }
 
 impl Oscillator {
     /// Create a new, unordered IoModule
-    pub fn new(id: String, process_fn: fn(&Oscillator, time: f64)) -> Self {
+    pub fn new(id: String) -> Self {
         let order = None;
         let mut in_ports: HashMap<String, IoPort> = HashMap::new();
         in_ports.insert("amp".to_string(), Arc::new(RwLock::new(None)));
@@ -38,23 +36,9 @@ impl Oscillator {
             order,
             in_ports,
             out_ports,
-            process_fn,
         }
     }
 
-    /// Read inputs and populate outputs
-    pub fn process_inputs(&self, time: f64) {
-        (self.process_fn)(self, time);
-
-        //let pi: SampleType = 3.14159265359;
-
-        //let amp = self.read_in_port_value("amp").unwrap();
-        //let freq = self.read_in_port_value("freq").unwrap();
-        //let audio_out = amp * (2.0 * pi * freq * time).sin();
-
-        //self.write_out_port_value("audio_out", Some(audio_out));
-
-    }
 }
 
 impl PartialEq for Oscillator {
@@ -64,6 +48,21 @@ impl PartialEq for Oscillator {
 }
 
 impl IoModuleTrait for Oscillator {
+    /// Read inputs and populate outputs
+    fn process_inputs(&mut self) {
+        let pi: SampleType = 3.14159265359;
+
+        // FIXME: Add time to module
+        let time = 0.0;
+
+        let amp = self.read_in_port_value("amp").unwrap_or(0.5);
+        let freq = self.read_in_port_value("freq").unwrap_or(400.0);
+        let audio_out = amp * (2.0 * pi * freq * time).sin();
+
+        self.write_out_port_value("audio_out", Some(audio_out));
+
+    }
+
     /// Return a module's ID
     fn get_id(&self) -> &String {
         &self.id
@@ -137,5 +136,4 @@ impl IoModuleTrait for Oscillator {
         self.order = new_order;
     }
 }
-
 

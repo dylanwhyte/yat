@@ -7,6 +7,5 @@ pub mod rack;
 // IoModules:
 pub mod oscillator;
 pub mod io_module;
+pub mod audo_out;
 
-// IoModule generator
-pub mod io_module_macro;

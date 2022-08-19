@@ -1,12 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use std::thread;
+
+use cpal::{Data, Sample, SampleFormat};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 use crate::types::{IoPort,SampleType};
 use crate::io_module_trait::IoModuleTrait;
 
-
-/// A template IoModule for testing and experimenting
-pub struct IoModule {
+/// An oscillator IoModule
+pub struct AudioOut {
     /// A unique string used for identifying the module
     id: String,
 
@@ -18,52 +21,55 @@ pub struct IoModule {
 
     /// The module's output ports
     out_ports: HashMap<String, IoPort>,
+
 }
 
-impl IoModule {
+impl AudioOut {
     /// Create a new, unordered IoModule
-    pub fn new(
-        id: String,
-        in_ports: HashMap<String, IoPort>,
-        out_ports: HashMap<String, IoPort>
-    ) -> Self {
+    pub fn new(id: String, audio_out_ref: IoPort) -> Self {
         let order = None;
+        let mut in_ports: HashMap<String, IoPort> = HashMap::new();
+        in_ports.insert("audio_in".to_string(), Arc::new(RwLock::new(None)));
 
-        Self {
+        let mut out_ports: HashMap<String, IoPort> = HashMap::new();
+        out_ports.insert(String::from("audio_out"), audio_out_ref);
+
+        let audio_out = Self {
             id,
             order,
             in_ports,
             out_ports,
-        }
+        };
+
+        //audio_out.generate_audio_thread();
+
+        audio_out
     }
 
-    /// Create a new, blank, unordered IoModule
-    pub fn new_blank(id: String) -> Self {
-        let in_ports = HashMap::new();
-        let out_ports = HashMap::new();
-        let order = None;
-
-        Self {
-            id,
-            order,
-            in_ports,
-            out_ports,
-        }
-    }
 }
 
-impl PartialEq for IoModule {
+impl PartialEq for AudioOut {
     fn eq(&self, other: &Self) -> bool {
             self.id == other.id
     }
 }
 
-impl IoModuleTrait for IoModule {
+impl IoModuleTrait for AudioOut {
+    fn process_inputs(&mut self) {
+        let audio_in = self.read_in_port_value("audio_in");
+
+        if let Some(audio_in) = audio_in {
+            self.write_out_port_value("audio_out", Some(audio_in));
+        }
+
+    }
+
+    /// Return a module's ID
     fn get_id(&self) -> &String {
         &self.id
     }
 
-    /// Add a port to the module (either in or out)
+    /// Add an input or output port to the module
     fn create_port(&mut self, port_type: &str, port_name: &str) {
         if port_type.eq("in") {
             self.in_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
@@ -72,10 +78,12 @@ impl IoModuleTrait for IoModule {
         }
     }
 
+    /// Return a reference to the module's input ports
     fn get_in_ports_ref(&self) -> &HashMap<String, IoPort> {
         &self.in_ports
     }
 
+    /// Return a reference to the module's input ports
     fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
         if let Some(in_port) = self.in_ports.get(port_id) {
             Some(in_port.to_owned().clone())
@@ -127,10 +135,6 @@ impl IoModuleTrait for IoModule {
 
     fn set_module_order(&mut self, new_order: Option<u64>) {
         self.order = new_order;
-    }
-
-    fn process_inputs(&mut self) {
-        println!("TODO");
     }
 }
 
