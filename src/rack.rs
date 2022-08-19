@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
+use crate::clock::Clock;
 use crate::io_module_trait::IoModuleTrait;
 use crate::io_module::IoModule;
 use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
@@ -14,7 +15,7 @@ pub struct Rack {
     //module_chain: HashMap<u64, Vec<String>>,
     module_chain: HashMap<u64, HashSet<String>>,
     //module_chain: Vec<String>,
-    time: SampleType,
+    clock: Clock,
 }
 
 impl Rack {
@@ -22,13 +23,13 @@ impl Rack {
     pub fn new() -> Self {
         let modules = HashMap::new();
         let module_chain = HashMap::new();
+        let clock = Clock::new();
         //let module_chain = Vec::new();
-        let time = 0.0;
 
         Self {
             modules,
             module_chain,
-            time,
+            clock,
         }
     }
 

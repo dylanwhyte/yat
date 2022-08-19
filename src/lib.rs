@@ -3,6 +3,7 @@ pub mod io_module_trait;
 pub mod types;
 pub mod project;
 pub mod rack;
+pub mod clock;
 
 // IoModules:
 pub mod oscillator;
