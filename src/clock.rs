@@ -11,6 +11,7 @@ pub struct Clock {
 impl Clock {
     pub fn new() -> Self {
         let time = Arc::new(RwLock::new(0.0));
+        // FIXME: SAMPLE_RATE should be taken from CPAL config
         let time_delta = 1.0 / (SAMPLE_RATE as SampleType);
         let running = AtomicBool::new(false);
 

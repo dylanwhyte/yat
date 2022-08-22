@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use std::sync::mpsc::{self, sync_channel, SyncSender, Receiver};
 use std::thread;
 
 use cpal::{Data, Sample, SampleFormat};
@@ -19,6 +20,8 @@ pub struct AudioOut {
     /// The module's input ports
     in_ports: HashMap<String, IoPort>,
 
+    audio_tx: mpsc::SyncSender<SampleType>,
+
     /// The module's output ports
     out_ports: HashMap<String, IoPort>,
 
@@ -26,24 +29,28 @@ pub struct AudioOut {
 
 impl AudioOut {
     /// Create a new, unordered IoModule
-    pub fn new(id: String, audio_out_ref: IoPort) -> Self {
+    //pub fn new(id: String, audio_out_ref: IoPort) -> (Self, Receiver<SampleType>) {
+    pub fn new(id: String) -> (Self, Receiver<SampleType>) {
         let order = None;
         let mut in_ports: HashMap<String, IoPort> = HashMap::new();
         in_ports.insert("audio_in".to_string(), Arc::new(RwLock::new(None)));
 
         let mut out_ports: HashMap<String, IoPort> = HashMap::new();
-        out_ports.insert(String::from("audio_out"), audio_out_ref);
+        //out_ports.insert(String::from("audio_out"), audio_out_ref);
+
+        let (audio_tx, audio_rx) = mpsc::sync_channel(44100);
 
         let audio_out = Self {
             id,
             order,
             in_ports,
+            audio_tx,
             out_ports,
         };
 
         //audio_out.generate_audio_thread();
 
-        audio_out
+        (audio_out, audio_rx)
     }
 
 }
@@ -58,8 +65,10 @@ impl IoModuleTrait for AudioOut {
     fn process_inputs(&mut self) {
         let audio_in = self.read_in_port_value("audio_in");
 
+
         if let Some(audio_in) = audio_in {
-            self.write_out_port_value("audio_out", Some(audio_in));
+            //self.write_out_port_value("audio_out", Some(audio_in));
+            self.audio_tx.send(audio_in).unwrap();
         }
 
     }
@@ -71,11 +80,11 @@ impl IoModuleTrait for AudioOut {
 
     /// Add an input or output port to the module
     fn create_port(&mut self, port_type: &str, port_name: &str) {
-        if port_type.eq("in") {
-            self.in_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
-        } else if port_type.eq("out") {
-            self.out_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
-        }
+        //if port_type.eq("in") {
+            //self.in_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
+        //} else if port_type.eq("out") {
+            //self.out_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
+        //}
     }
 
     /// Return a reference to the module's input ports

@@ -1,7 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use std::sync::atomic::AtomicBool;
+
+use cpal::{SupportedStreamConfig, Host};
+use cpal::traits::{HostTrait, DeviceTrait};
 
 use crate::clock::Clock;
+use crate::cpal_config::CpalConfig;
 use crate::io_module_trait::IoModuleTrait;
 use crate::io_module::IoModule;
 use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
@@ -9,13 +14,19 @@ use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
     /// A map of IoBlocks, using their IDs as identifier
-    pub modules: HashMap<String, Box<dyn IoModuleTrait>>,
+    pub modules: HashMap<String, Box<dyn IoModuleTrait + Send + Sync>>,
 
     /// Ordered modules for sequential processing
     //module_chain: HashMap<u64, Vec<String>>,
     module_chain: HashMap<u64, HashSet<String>>,
+
     //module_chain: Vec<String>,
-    clock: Clock,
+    pub clock: Clock,
+
+    pub running: AtomicBool,
+
+    // cpal host, device and config
+    cpal_config: Arc<RwLock<CpalConfig>>,
 }
 
 impl Rack {
@@ -25,16 +36,27 @@ impl Rack {
         let module_chain = HashMap::new();
         let clock = Clock::new();
         //let module_chain = Vec::new();
+        let running = AtomicBool::new(false);
+
+        let cpal_config = Arc::new(RwLock::new(CpalConfig::new()));
+
 
         Self {
             modules,
             module_chain,
             clock,
+            running,
+            cpal_config,
         }
     }
 
+    /// Return the cpal config
+    pub fn get_cpal_config(&self) -> Arc<RwLock<CpalConfig>> {
+        self.cpal_config.clone()
+    }
+
     /// Add a new module to the Rack
-    pub fn add_module(&mut self, module: Box<dyn IoModuleTrait>) {
+    pub fn add_module(&mut self, module: Box<dyn IoModuleTrait + Send + Sync>) {
         self.modules.insert(module.get_id().clone(), module);
     }
 
@@ -189,22 +211,46 @@ impl Rack {
     }
 
     pub fn process_module_chain(&mut self) {
-        let time_delta = 1.0 / (SAMPLE_RATE as SampleType);
+        let order_max = self.get_order_max().unwrap_or(&0).to_owned();
 
-        // FIXME: read 'order' in ascending order, e.g. for 1..order_max
-        for (order, modules) in self.module_chain.iter() {
-            for module in modules {
-                println!("processing: {}", module);
-                let module = &mut *self.modules.get_mut(module).unwrap();
-                module.process_inputs();
+        // Process modules in order_max
+        // FIXME - This has potential to be parallelised as modules of
+        // equal order should be able to process at the same time
+        for position in 1..=order_max {
+            for module in self.module_chain.get_mut(&position).unwrap().iter() {
+                self.modules.get_mut(module).unwrap().process_inputs();
             }
         }
-        if self.time >= 1.0 {
-            //*current_time -= 1.0;
-            self.time = 0.0;
-        } else {
-            self.time += time_delta;
-        }
+
+        // After each module has been processed update the time for the next round of processing
+        self.clock.increment();
+    }
+
+    // Returns the highest value order in the module_chain hashmap
+    fn get_order_max(&self) -> Option<&u64> {
+        self.module_chain.keys().to_owned().reduce(
+            |accum, item| {
+                if accum >= item { accum } else { item }
+            })
+
+    }
+
+    pub fn run(&mut self) {
+        //let mut x = 0;
+        *self.running.get_mut() = true;
+
+        //while *self.running.get_mut() {
+            //self.process_module_chain();
+            //if x == 100_000 {
+                //println!("processing modules");
+                //x = 0;
+            //}
+            //x += 1;
+        //}
+    }
+
+    pub fn stop(&mut self) {
+        *self.running.get_mut() = false;
     }
 
 }

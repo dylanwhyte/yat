@@ -18,11 +18,13 @@ pub struct Oscillator {
     /// The module's output ports
     out_ports: HashMap<String, IoPort>,
 
+    /// Time of the rack's clock
+    time: Arc<RwLock<SampleType>>,
 }
 
 impl Oscillator {
     /// Create a new, unordered IoModule
-    pub fn new(id: String) -> Self {
+    pub fn new(id: String, time: Arc<RwLock<SampleType>>) -> Self {
         let order = None;
         let mut in_ports: HashMap<String, IoPort> = HashMap::new();
         in_ports.insert("amp".to_string(), Arc::new(RwLock::new(None)));
@@ -36,6 +38,7 @@ impl Oscillator {
             order,
             in_ports,
             out_ports,
+            time,
         }
     }
 
@@ -53,10 +56,12 @@ impl IoModuleTrait for Oscillator {
         let pi: SampleType = 3.14159265359;
 
         // FIXME: Add time to module
-        let time = 0.0;
+        let time = *self.time.read().unwrap();
 
         let amp = self.read_in_port_value("amp").unwrap_or(0.5);
         let freq = self.read_in_port_value("freq").unwrap_or(400.0);
+
+
         let audio_out = amp * (2.0 * pi * freq * time).sin();
 
         self.write_out_port_value("audio_out", Some(audio_out));
