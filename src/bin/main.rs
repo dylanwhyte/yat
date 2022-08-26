@@ -30,18 +30,28 @@ fn main() -> ModuleResult<()> {
     let osc = Oscillator::new("osc".to_string(),
     rack.lock().unwrap().clock.time.clone());
 
+    let mut lfo = Oscillator::new("lfo".to_string(),
+    rack.lock().unwrap().clock.time.clone());
+
+    let ctrl_a = Arc::new(RwLock::new(Some(20.0)));
+    lfo.set_in_port("freq", ctrl_a);
+
     { rack.lock().unwrap().add_module(Box::new(osc)); }
+    { rack.lock().unwrap().add_module(Box::new(lfo)); }
     { rack.lock().unwrap().add_module(Box::new(audio_out)); }
 
+    { rack.lock().unwrap().connect_modules("lfo", "audio_out", "osc", "amp")?; }
     { rack.lock().unwrap().connect_modules("osc", "audio_out", "audio_out", "audio_in")?; }
 
+    { rack.lock().unwrap().print_connection("lfo", "osc"); }
     { rack.lock().unwrap().print_connection("osc", "audio_out"); }
 
     { rack.lock().unwrap().print_module_order(); }
 
 
     let stdin = io::stdin();
-        let controller_thread_scope = thread::scope(|c_scope| {
+        //let controller_thread_scope =
+    thread::scope(|c_scope| {
             let (quit_tx, quit_rx) = mpsc::sync_channel(1);
             c_scope.spawn(move || {
                 //let mut x = 0;
