@@ -50,13 +50,6 @@ fn main() -> ModuleResult<()> {
                     while *s_rack_ref.lock().unwrap().running.get_mut() {
                         { s_rack_ref.lock().unwrap().process_module_chain(); }
 
-                        // TODO: Remove this DEBUG line
-                        //if x == 1_000 {
-                            //println!("processing modules");
-                            //x = 0;
-                        //}
-                        //x += 1;
-
                     }
                     match quit_rx.try_recv() {
                         Ok(_) => break,
@@ -86,6 +79,7 @@ fn main() -> ModuleResult<()> {
             }
 
         });
+
 
     Ok(())
 }

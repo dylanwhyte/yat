@@ -213,10 +213,7 @@ impl Rack {
 
                 let next_module = self.modules.get_mut(module).unwrap();
 
-                //let start = Instant::now();
                 next_module.process_inputs();
-                //let duration = start.elapsed();
-                //println!("module: {}, duration: {:?}", module, duration);
             }
         }
 
