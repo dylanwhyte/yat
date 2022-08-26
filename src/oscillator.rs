@@ -97,15 +97,6 @@ impl IoModuleTrait for Oscillator {
         &self.id
     }
 
-    /// Add an input or output port to the module
-    fn create_port(&mut self, port_type: &str, port_name: &str) {
-        if port_type.eq("in") {
-            self.in_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
-        } else if port_type.eq("out") {
-            self.out_ports.insert(port_name.to_string(), Arc::new(RwLock::new(None)));
-        }
-    }
-
     /// Return a reference to the module's input ports
     fn get_in_ports_ref(&self) -> &HashMap<String, IoPort> {
         &self.in_ports

@@ -9,9 +9,6 @@ pub trait IoModuleTrait {
     /// Get the module's unique ID
     fn get_id(&self) -> &String;
 
-    /// Add an input or output port to the module
-    fn create_port(&mut self, port_type: &str, port_name: &str);
-
     /// Returns a reference to the modules input ports
     fn get_in_ports_ref(&self) -> &HashMap<String, IoPort>;
 
