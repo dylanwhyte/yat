@@ -1,5 +1,6 @@
 #![allow(dead_code)]
-use std::collections::{HashMap, HashSet};
+//use std::collections::{HashMap, HashSet};
+use hashbrown::{HashMap, HashSet};
 use std::fmt;
 
 use crate::types::{IoPort, SampleType};

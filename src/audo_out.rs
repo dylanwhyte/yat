@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet};
+//use std::collections::{HashMap, HashSet};
+use hashbrown::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::sync::mpsc::{self, sync_channel, SyncSender, Receiver};
 use std::thread;

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 cpal = "0.13.4"
 anyhow = "1.0.58"
+hashbrown = "0.12.3"
