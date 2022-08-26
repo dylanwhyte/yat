@@ -15,6 +15,9 @@ pub trait IoModuleTrait {
     /// Returns a reference to the modules input ports
     fn get_in_ports_ref(&self) -> &HashMap<String, IoPort>;
 
+    /// Returns the module's input ports
+    fn get_in_ports(&self) -> &Vec<String>;
+
     /// Returns a reference to a single input port
     fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort>;
 

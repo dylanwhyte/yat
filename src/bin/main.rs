@@ -7,13 +7,11 @@ use std::io::{self, BufRead};
 use cpal::{Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
+use yat::io_module_trait::IoModuleTrait;
 use yat::types::{ModuleResult, SampleType};
 use yat::rack::Rack;
 use yat::oscillator::Oscillator;
 use yat::audo_out::AudioOut;
-use yat::cpal_config::CpalConfig;
-
-use yat::types::IoPort;
 
 
 fn main() -> ModuleResult<()> {
@@ -25,7 +23,6 @@ fn main() -> ModuleResult<()> {
 
     setup_audio_thread(audio_rx);
 
-    let rack = Arc::new(Mutex::new(Rack::new()));
     let c_rack_ref = Arc::clone(&rack);
     let s_rack_ref = Arc::clone(&rack);
 

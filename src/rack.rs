@@ -9,7 +9,6 @@ use cpal::traits::{HostTrait, DeviceTrait};
 use crate::clock::Clock;
 use crate::cpal_config::CpalConfig;
 use crate::io_module_trait::IoModuleTrait;
-use crate::io_module::IoModule;
 use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
 
 /// A Rack encompasses a group of conntected modules
@@ -59,16 +58,6 @@ impl Rack {
     /// Add a new module to the Rack
     pub fn add_module(&mut self, module: Box<dyn IoModuleTrait + Send + Sync>) {
         self.modules.insert(module.get_id().clone(), module);
-    }
-
-    pub fn add_audio_output(&mut self, audio_out: IoModule) {
-        // TODO
-
-    }
-
-    /// Remove a module from the Rack
-    fn remove_module(&mut self, _module: IoModule) {
-        // TODO
     }
 
     /// Conect two modules via the given ports
@@ -213,13 +202,21 @@ impl Rack {
 
     pub fn process_module_chain(&mut self) {
         let order_max = self.get_order_max().unwrap_or(&0).to_owned();
+        //println!("Get order_max time: {:?}", duration);
+        //let order_max = 2;
 
         // Process modules in order_max
         // FIXME - This has potential to be parallelised as modules of
         // equal order should be able to process at the same time
         for position in 1..=order_max {
             for module in self.module_chain.get_mut(&position).unwrap().iter() {
-                self.modules.get_mut(module).unwrap().process_inputs();
+
+                let next_module = self.modules.get_mut(module).unwrap();
+
+                //let start = Instant::now();
+                next_module.process_inputs();
+                //let duration = start.elapsed();
+                //println!("module: {}, duration: {:?}", module, duration);
             }
         }
 
