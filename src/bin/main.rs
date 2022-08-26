@@ -33,7 +33,7 @@ fn main() -> ModuleResult<()> {
     let mut lfo = Oscillator::new("lfo".to_string(),
     rack.lock().unwrap().clock.time.clone());
 
-    let ctrl_a = Arc::new(RwLock::new(Some(20.0)));
+    let ctrl_a = Arc::new(RwLock::new(Some(5.0)));
     lfo.set_in_port("freq", ctrl_a);
 
     { rack.lock().unwrap().add_module(Box::new(osc)); }

@@ -77,10 +77,8 @@ impl IoModuleTrait for Oscillator {
         // FIXME: Add time to module
         let time = *self.time.read().unwrap();
 
-        //let amp = self.read_in_port_value("amp").unwrap_or(0.5);
-        //let freq = self.read_in_port_value("freq").unwrap_or(400.0);
 
-        let amp = self.in_freq.read().unwrap().unwrap_or(0.5);
+        let amp = self.in_amp.read().unwrap().unwrap_or(0.5);
         //println!("amplitude {}", amp);
 
         let freq = self.in_freq.read().unwrap().unwrap_or(400.0);

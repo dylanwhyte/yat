@@ -4,6 +4,7 @@ use std::fmt;
 
 pub type SampleType = f32;
 pub const SAMPLE_RATE: u32 = 44100;
+pub const AUDIO_BUF_SIZE: u32 = 1024;
 pub type IoPort = Arc<RwLock<Option<SampleType>>>;
 pub type ModuleResult<T> = std::result::Result<T, ModuleNotFoundError>;
 

@@ -7,7 +7,7 @@ use std::thread;
 use cpal::{Data, Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
-use crate::types::{IoPort,SampleType};
+use crate::types::{AUDIO_BUF_SIZE, IoPort, SampleType};
 use crate::io_module_trait::IoModuleTrait;
 
 /// An oscillator IoModule
@@ -47,7 +47,7 @@ impl AudioOut {
         let out_ports: HashMap<String, IoPort> = HashMap::new();
         //out_ports.insert(String::from("audio_out"), audio_out_ref);
 
-        let (audio_tx, audio_rx) = mpsc::sync_channel(44100);
+        let (audio_tx, audio_rx) = mpsc::sync_channel(AUDIO_BUF_SIZE);
 
         let audio_out = Self {
             id,
