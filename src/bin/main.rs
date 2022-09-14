@@ -164,13 +164,6 @@ fn run<T: Sample>(device: &cpal::Device, config: &cpal::StreamConfig, audio_rx: 
 				// Convert the make_noise output into a sample
                 let next_sample = audio_rx.recv().unwrap();
                 let value: T = cpal::Sample::from::<f32>(&next_sample);
-                    //Some(val) => {
-                        //cpal::Sample::from::<f32>(&val)
-                    //},
-                    //None => {
-                        //cpal::Sample::from::<f32>(&0.0)
-                    //},
-                //};
 
 				for sample in frame.iter_mut() {
 					*sample = value;
