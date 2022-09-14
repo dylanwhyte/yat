@@ -136,58 +136,35 @@ impl Rack {
     }
 
 
-    pub fn disconnect_modules(
-        &mut self,
-        out_module_id: &str,
-        out_port_id: &str,
-        in_module_id: &str,
-        in_port_id: &str,
-    ) {
-
-        if let Some(out_module) = self.modules.get(out_module_id) {
-            if let Some(in_module) = self.modules.get(in_module_id) {
-                if let Some(_out_port) = out_module.get_out_port_ref(out_port_id) {
-                    if in_module.get_in_ports_ref().contains_key(in_port_id) {
-                        let mut in_ports = in_module.get_in_ports_ref().to_owned();
-                        in_ports.remove(in_port_id);
-                    }
-                }
-            }
-        }
+    pub fn disconnect_modules(&mut self) {
+        // TODO
     }
 
-    /// Print the connections between a Rack's items
     pub fn list_ports(&self) {
         println!("Ports:");
         for (module_id, module) in &self.modules {
             println!("Module - {}:", module_id);
 
             println!("\tinputs:");
-            for id in module.get_in_ports_ref().keys() {
+            for id in module.get_in_ports() {
                 println!("\t\t{}", id);
             }
             println!("\toutputs:");
-            for id in module.get_out_ports_ref().keys() {
+            for id in module.get_out_ports() {
                 println!("\t\t{}", id);
             }
             println!();
         }
     }
 
+    /// Print the connections between a Rack's items
     pub fn print_connection(&self, module_a: &str, module_b: &str) {
         let module_a = self.modules.get(module_a).unwrap();
         let module_b = self.modules.get(module_b).unwrap();
 
         println!("{} : {}", module_a.get_id(), module_b.get_id());
-        for (out_port_id, out_value) in module_a.get_out_ports_ref().iter() {
-            for (in_port_id, in_value) in module_b.get_in_ports_ref().iter() {
-                if Arc::ptr_eq(out_value, in_value) {
-                    println!("\t{} <----> {}", out_port_id, in_port_id);
-                } else {
-                    println!("\t{}        {}", out_port_id, in_port_id);
-                }
-            }
-        }
+
+        // TODO
     }
 
     pub fn print_module_order(&self) {
@@ -231,17 +208,7 @@ impl Rack {
     }
 
     pub fn run(&mut self) {
-        //let mut x = 0;
         *self.running.get_mut() = true;
-
-        //while *self.running.get_mut() {
-            //self.process_module_chain();
-            //if x == 100_000 {
-                //println!("processing modules");
-                //x = 0;
-            //}
-            //x += 1;
-        //}
     }
 
     pub fn stop(&mut self) {

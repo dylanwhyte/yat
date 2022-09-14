@@ -20,16 +20,11 @@ pub struct AudioOut {
 
     input_ports: Vec<String>,
 
+    output_ports: Vec<String>,
+
     in_audio_in: IoPort,
 
-    /// The module's input ports
-    in_ports: HashMap<String, IoPort>,
-
     audio_tx: mpsc::SyncSender<SampleType>,
-
-    /// The module's output ports
-    out_ports: HashMap<String, IoPort>,
-
 }
 
 impl AudioOut {
@@ -37,15 +32,10 @@ impl AudioOut {
     //pub fn new(id: String, audio_out_ref: IoPort) -> (Self, Receiver<SampleType>) {
     pub fn new(id: String) -> (Self, Receiver<SampleType>) {
         let order = None;
-        let mut in_ports: HashMap<String, IoPort> = HashMap::new();
-        in_ports.insert("audio_in".to_string(), Arc::new(RwLock::new(None)));
-
         let input_ports = vec!["audio_in".to_string()];
+        let output_ports = vec![];
 
         let in_audio_in = Arc::new(RwLock::new(None));
-
-        let out_ports: HashMap<String, IoPort> = HashMap::new();
-        //out_ports.insert(String::from("audio_out"), audio_out_ref);
 
         let (audio_tx, audio_rx) = mpsc::sync_channel(AUDIO_BUF_SIZE);
 
@@ -53,13 +43,10 @@ impl AudioOut {
             id,
             order,
             input_ports,
+            output_ports,
             in_audio_in,
-            in_ports,
             audio_tx,
-            out_ports,
         };
-
-        //audio_out.generate_audio_thread();
 
         (audio_out, audio_rx)
     }
@@ -89,14 +76,12 @@ impl IoModuleTrait for AudioOut {
         &self.id
     }
 
-    /// Return a reference to the module's input ports
-    fn get_in_ports_ref(&self) -> &HashMap<String, IoPort> {
-        &self.in_ports
-    }
-
-
     fn get_in_ports(&self) -> &Vec<String> {
         &self.input_ports
+    }
+
+    fn get_out_ports(&self) -> &Vec<String> {
+        &self.output_ports
     }
 
     /// Return a reference to the module's input ports
@@ -105,11 +90,6 @@ impl IoModuleTrait for AudioOut {
             "audio_in" => Some(self.in_audio_in.clone()),
             _ => None,
         }
-        //if let Some(in_port) = self.in_ports.get(port_id) {
-            //Some(in_port.to_owned().clone())
-        //} else {
-            //None
-        //}
     }
 
     /// Set the value of a module's input port
@@ -119,41 +99,12 @@ impl IoModuleTrait for AudioOut {
             "audio_in" => {self.in_audio_in = out_port.clone() }
             _ => (),
         }
-        //if self.in_ports.contains_key(port_id) {
-            //self.in_ports.insert(port_id.to_string(), out_port.clone());
-        //}
-    }
-
-    /// Get the actual value at a port
-    fn read_in_port_value(&self, in_port_label: &str) -> Option<SampleType> {
-        if let Some(in_port) = self.in_ports.get(in_port_label) {
-            *in_port.to_owned().read().unwrap()
-        } else {
-            None
-        }
-    }
-
-    fn get_out_ports_ref(&self) -> &HashMap<String, IoPort> {
-        &self.out_ports
     }
 
     fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
         match port_id {
             //"audio_out" => Some(self.out_audio_out.clone()),
             _ => None,
-        }
-        //if let Some(out_port) = self.out_ports.get(port_id) {
-            //Some(out_port.to_owned().clone())
-        //} else {
-            //None
-        //}
-    }
-
-    fn write_out_port_value(&self, out_port_label: &str, new_value: Option<SampleType>) {
-        if let Some(out_port) = self.out_ports.get(out_port_label) {
-            if let Ok(mut value) = out_port.write() {
-                *value = new_value;
-            }
         }
     }
 
