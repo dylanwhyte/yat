@@ -61,14 +61,9 @@ impl PartialEq for AudioOut {
 
 impl IoModuleTrait for AudioOut {
     fn process_inputs(&mut self) {
-
-        //let audio_in = self.read_in_port_value("audio_in");
-
         let audio_in = *self.in_audio_in.read().unwrap();
 
         self.audio_tx.send(audio_in.unwrap()).unwrap();
-
-
     }
 
     /// Return a module's ID
@@ -92,19 +87,19 @@ impl IoModuleTrait for AudioOut {
         }
     }
 
+    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
+        match port_id {
+            //"audio_out" => Some(self.out_audio_out.clone()),
+            _ => None,
+        }
+    }
+
     /// Set the value of a module's input port
     // TODO: Handle non-existent port case
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) {
         match port_id {
             "audio_in" => {self.in_audio_in = out_port.clone() }
             _ => (),
-        }
-    }
-
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
-        match port_id {
-            //"audio_out" => Some(self.out_audio_out.clone()),
-            _ => None,
         }
     }
 

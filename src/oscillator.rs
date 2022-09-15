@@ -100,6 +100,13 @@ impl IoModuleTrait for Oscillator {
         }
     }
 
+    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
+        match port_id {
+            "audio_out" => Some(self.out_audio_out.clone()),
+            _ => None,
+        }
+    }
+
     /// Set the value of a module's input port
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) {
         match port_id {
@@ -108,13 +115,6 @@ impl IoModuleTrait for Oscillator {
             "freq" => { println!("setting freq");
                 self.in_freq = out_port.clone(); }
             _ => println!("port does not exist"),
-        }
-    }
-
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
-        match port_id {
-            "audio_out" => Some(self.out_audio_out.clone()),
-            _ => None,
         }
     }
 
