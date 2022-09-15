@@ -114,8 +114,13 @@ impl Rack {
 				in_module.set_module_order(Some(2));
 			},
 			(None, Some(order)) => {
-				out_module.set_module_order(Some(order));
-				in_module.set_module_order(Some(order + 1));
+                if order == 1 {
+                    out_module.set_module_order(Some(order));
+                    in_module.set_module_order(Some(order + 1));
+                } else {
+                    out_module.set_module_order(Some(order - 1));
+                    in_module.set_module_order(Some(order));
+                }
 			},
 			(Some(order), None) => {
 				in_module.set_module_order(Some(order + 1));
