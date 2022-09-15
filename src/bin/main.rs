@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use std::sync::{Arc, RwLock, Mutex};
-use std::sync::mpsc::{self, SyncSender, Receiver};
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::io::{self, BufRead};
 
@@ -30,20 +30,28 @@ fn main() -> ModuleResult<()> {
     let osc = Oscillator::new("osc".to_string(),
     rack.lock().unwrap().clock.time.clone());
 
-    let mut lfo = Oscillator::new("lfo".to_string(),
+    let mut lfo1 = Oscillator::new("lfo1".to_string(),
+    rack.lock().unwrap().clock.time.clone());
+
+    let mut lfo2 = Oscillator::new("lfo2".to_string(),
     rack.lock().unwrap().clock.time.clone());
 
     let ctrl_a = Arc::new(RwLock::new(Some(5.0)));
-    lfo.set_in_port("freq", ctrl_a);
+    lfo1.set_in_port("freq", ctrl_a);
+
+    let ctrl_b = Arc::new(RwLock::new(Some(5.0)));
+    lfo2.set_in_port("freq", ctrl_b);
 
     { rack.lock().unwrap().add_module(Box::new(osc)); }
-    { rack.lock().unwrap().add_module(Box::new(lfo)); }
+    { rack.lock().unwrap().add_module(Box::new(lfo1)); }
+    { rack.lock().unwrap().add_module(Box::new(lfo2)); }
     { rack.lock().unwrap().add_module(Box::new(audio_out)); }
 
-    { rack.lock().unwrap().connect_modules("lfo", "audio_out", "osc", "amp")?; }
+    { rack.lock().unwrap().connect_modules("lfo1", "audio_out", "osc", "amp")?; }
+    { rack.lock().unwrap().connect_modules("lfo2", "audio_out", "osc", "freq")?; }
     { rack.lock().unwrap().connect_modules("osc", "audio_out", "audio_out", "audio_in")?; }
 
-    { rack.lock().unwrap().print_connection("lfo", "osc"); }
+    { rack.lock().unwrap().print_connection("lfo1", "osc"); }
     { rack.lock().unwrap().print_connection("osc", "audio_out"); }
 
     { rack.lock().unwrap().print_module_order(); }
@@ -116,13 +124,13 @@ fn setup_audio_thread(
     audio_rx: Receiver<SampleType>)
 { //-> IoPort {
 
-    let audio_thread = thread::spawn(move || {
+    let _ = thread::spawn(move || {
 
         let host = cpal::default_host();
         let device = host.default_output_device().expect("no device available");
         let config = device.default_output_config().unwrap();
 
-       let ret_audio_out = match config.sample_format() {
+        let _ = match config.sample_format() {
             SampleFormat::F32 => run::<f32>(
                 &device,
                 &config.into(),
