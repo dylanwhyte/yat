@@ -101,7 +101,6 @@ impl IoModuleTrait for Oscillator {
     }
 
     /// Set the value of a module's input port
-    // TODO: Handle non-existent port case
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) {
         match port_id {
             "amp" => { println!("setting amp");
