@@ -87,7 +87,14 @@ impl Rack {
             }
         }?;
 
-		let out_port = out_module.get_out_port_ref(out_port_id).ok_or(ModuleNotFoundError)?;
+		let out_port = match out_module.get_out_port_ref(out_port_id) {
+            Some(out_port) => out_port,
+            None => {
+                self.modules.insert(String::from(in_module_id), in_module);
+                println!("Module {} does not have a port {}", out_module_id, out_port_id);
+                return Err(ModuleNotFoundError);
+            },
+        };
 
         // Only connect to existing port, in order to avoid mistakes
         // Note: with this, older connections to the port are automatically disconnected
@@ -97,6 +104,7 @@ impl Rack {
         } else {
             // Add previously removed module back before failure
             self.modules.insert(String::from(in_module_id), in_module);
+            println!("Module {} does not have a port {}", in_module_id, in_port_id);
             return Err(ModuleNotFoundError);
         }
 
@@ -117,13 +125,13 @@ impl Rack {
 
         // Add entry to module position for this functions order
         self.module_chain.entry(out_module.get_module_order().unwrap())
-            // If there's no entry for key 3, create a new Vec and return a mutable ref to it
+            // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
             .insert(out_module.get_id().clone());
 
         self.module_chain.entry(in_module.get_module_order().unwrap())
-            // If there's no entry for key 3, create a new Vec and return a mutable ref to it
+            // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
             .insert(in_module.get_id().clone());
@@ -179,8 +187,6 @@ impl Rack {
 
     pub fn process_module_chain(&mut self) {
         let order_max = self.get_order_max().unwrap_or(&0).to_owned();
-        //println!("Get order_max time: {:?}", duration);
-        //let order_max = 2;
 
         // Process modules in order_max
         // FIXME - This has potential to be parallelised as modules of
@@ -203,8 +209,8 @@ impl Rack {
         self.module_chain.keys().to_owned().reduce(
             |accum, item| {
                 if accum >= item { accum } else { item }
-            })
-
+            }
+        )
     }
 
     pub fn run(&mut self) {
