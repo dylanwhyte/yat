@@ -39,19 +39,23 @@ fn main() -> ModuleResult<()> {
     let ctrl_a = Arc::new(RwLock::new(Some(5.0)));
     lfo1.set_in_port("freq", ctrl_a);
 
-    let ctrl_b = Arc::new(RwLock::new(Some(5.0)));
+    let ctrl_b = Arc::new(RwLock::new(Some(500.0)));
     lfo2.set_in_port("freq", ctrl_b);
 
-    { rack.lock().unwrap().add_module(Box::new(osc)); }
-    { rack.lock().unwrap().add_module(Box::new(lfo1)); }
-    { rack.lock().unwrap().add_module(Box::new(lfo2)); }
-    { rack.lock().unwrap().add_module(Box::new(audio_out)); }
+    { rack.lock().unwrap().add_module(Arc::new(Mutex::new(osc))); }
+    { rack.lock().unwrap().add_module(Arc::new(Mutex::new(lfo1))); }
+    { rack.lock().unwrap().add_module(Arc::new(Mutex::new(lfo2))); }
+    { rack.lock().unwrap().add_module(Arc::new(Mutex::new(audio_out))); }
 
     { rack.lock().unwrap().connect_modules("lfo1", "audio_out", "osc", "amp")?; }
+
     { rack.lock().unwrap().connect_modules("lfo2", "audio_out", "osc", "freq")?; }
+
     { rack.lock().unwrap().connect_modules("osc", "audio_out", "audio_out", "audio_in")?; }
 
+
     { rack.lock().unwrap().print_connection("lfo1", "osc"); }
+
     { rack.lock().unwrap().print_connection("osc", "audio_out"); }
 
     { rack.lock().unwrap().print_module_order(); }

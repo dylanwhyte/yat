@@ -1,6 +1,5 @@
-//use std::collections::{HashMap, HashSet};
 use hashbrown::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use std::sync::atomic::AtomicBool;
 
 use cpal::{SupportedStreamConfig, Host};
@@ -14,11 +13,10 @@ use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
     /// A map of IoBlocks, using their IDs as identifier
-    pub modules: HashMap<String, Box<dyn IoModuleTrait + Send + Sync>>,
+    modules: HashMap<String, Arc<Mutex<dyn IoModuleTrait + Send + Sync>>>,
 
     /// Ordered modules for sequential processing
-    //module_chain: HashMap<u64, Vec<String>>,
-    module_chain: HashMap<u64, HashSet<String>>,
+    module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModuleTrait + Send + Sync>>>>,
 
     //module_chain: Vec<String>,
     pub clock: Clock,
@@ -35,7 +33,6 @@ impl Rack {
         let modules = HashMap::new();
         let module_chain = HashMap::new();
         let clock = Clock::new();
-        //let module_chain = Vec::new();
         let running = AtomicBool::new(false);
 
         let cpal_config = Arc::new(RwLock::new(CpalConfig::new()));
@@ -56,8 +53,9 @@ impl Rack {
     }
 
     /// Add a new module to the Rack
-    pub fn add_module(&mut self, module: Box<dyn IoModuleTrait + Send + Sync>) {
-        self.modules.insert(module.get_id().clone(), module);
+    pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModuleTrait + Send + Sync>>) {
+        let module_id = { module.lock().unwrap().get_id().clone() };
+        self.modules.insert(module_id, module);
     }
 
     /// Conect two modules via the given ports
@@ -70,24 +68,28 @@ impl Rack {
     ) -> std::result::Result<(), ModuleNotFoundError> {
         // Check for presence of the key and remove the module from the hash map if it exists
         // This is the only way I see to have mutible references to two elements of the HashMap
-		let mut in_module = if self.modules.contains_key(in_module_id) {
+
+        let in_module = if self.modules.contains_key(in_module_id) {
             self.modules.remove(in_module_id).ok_or(ModuleNotFoundError)
         } else {
             println!("Module {} does not exist", in_module_id);
             Err(ModuleNotFoundError)
         }?;
 
+
         let out_module = match self.modules.get_mut(out_module_id) {
             Some(module) => Ok(module),
             None => {
                 // Add previously removed module back before failure
+                println!("Reinserting module after failure");
                 self.modules.insert(String::from(in_module_id), in_module);
                 println!("Module {} does not exist", out_module_id);
                 return Err(ModuleNotFoundError);
             }
         }?;
 
-		let out_port = match out_module.get_out_port_ref(out_port_id) {
+        let port_id = { out_module.lock().unwrap().get_out_port_ref(out_port_id) };
+        let out_port = match port_id {
             Some(out_port) => out_port,
             None => {
                 self.modules.insert(String::from(in_module_id), in_module);
@@ -99,53 +101,56 @@ impl Rack {
         // Only connect to existing port, in order to avoid mistakes
         // Note: with this, older connections to the port are automatically disconnected
         //       it's possible that extra handling will be required here
-        if let Some(_) = in_module.get_in_port_ref(in_port_id) {
-            in_module.set_in_port(in_port_id, out_port.clone());
+        let port_id = { in_module.lock().unwrap().get_in_port_ref(in_port_id) };
+        if let Some(_) = port_id {
+            in_module.lock().unwrap().set_in_port(in_port_id, out_port.clone());
         } else {
             // Add previously removed module back before failure
-            self.modules.insert(String::from(in_module_id), in_module);
+            self.modules.insert(String::from(in_module_id.clone()), in_module);
             println!("Module {} does not have a port {}", in_module_id, in_port_id);
             return Err(ModuleNotFoundError);
         }
 
-		match (out_module.get_module_order(), in_module.get_module_order()) {
-			(None, None) => {
-				out_module.set_module_order(Some(1));
-				in_module.set_module_order(Some(2));
-			},
-			(None, Some(order)) => {
+        let out_module_order = { out_module.lock().unwrap().get_module_order() };
+        let in_module_order = { in_module.lock().unwrap().get_module_order() };
+        match (out_module_order, in_module_order) {
+            (None, None) => {
+                out_module.lock().unwrap().set_module_order(Some(1));
+                in_module.lock().unwrap().set_module_order(Some(2));
+            },
+            (None, Some(order)) => {
                 if order == 1 {
-                    out_module.set_module_order(Some(order));
-                    in_module.set_module_order(Some(order + 1));
+                    out_module.lock().unwrap().set_module_order(Some(order));
+                    in_module.lock().unwrap().set_module_order(Some(order + 1));
                 } else {
-                    out_module.set_module_order(Some(order - 1));
-                    in_module.set_module_order(Some(order));
+                    out_module.lock().unwrap().set_module_order(Some(order - 1));
+                    in_module.lock().unwrap().set_module_order(Some(order));
                 }
-			},
-			(Some(order), None) => {
-				in_module.set_module_order(Some(order + 1));
-			},
-			(Some(_), Some(order)) => { in_module.set_module_order(Some(order + 1)); },
-		}
+            },
+            (Some(order), None) => {
+                in_module.lock().unwrap().set_module_order(Some(order + 1));
+            },
+            (Some(_), Some(order)) => { in_module.lock().unwrap().set_module_order(Some(order + 1)); },
+        }
 
         // Add entry to module position for this functions order
-        self.module_chain.entry(out_module.get_module_order().unwrap())
+        self.module_chain.entry(out_module.lock().unwrap().get_module_order().unwrap())
             // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
-            .insert(out_module.get_id().clone());
+            //.insert(out_module.get_id().clone());
+            .push(out_module.clone());
 
-        self.module_chain.entry(in_module.get_module_order().unwrap())
+        self.module_chain.entry(in_module.lock().unwrap().get_module_order().unwrap())
             // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
-            .insert(in_module.get_id().clone());
+            .push(in_module.clone());
 
         // Add back previously removed module, with updated ports
         self.modules.insert(String::from(in_module_id), in_module);
 
-
-		Ok(())
+        Ok(())
     }
 
 
@@ -159,11 +164,11 @@ impl Rack {
             println!("Module - {}:", module_id);
 
             println!("\tinputs:");
-            for id in module.get_in_ports() {
+            for id in module.lock().unwrap().get_in_ports() {
                 println!("\t\t{}", id);
             }
             println!("\toutputs:");
-            for id in module.get_out_ports() {
+            for id in module.lock().unwrap().get_out_ports() {
                 println!("\t\t{}", id);
             }
             println!();
@@ -175,7 +180,7 @@ impl Rack {
         let module_a = self.modules.get(module_a).unwrap();
         let module_b = self.modules.get(module_b).unwrap();
 
-        println!("{} : {}", module_a.get_id(), module_b.get_id());
+        println!("{} : {}", module_a.lock().unwrap().get_id(), module_b.lock().unwrap().get_id());
 
         // TODO
     }
@@ -185,7 +190,7 @@ impl Rack {
         for (order, modules) in self.module_chain.iter() {
             println!("\tModules in position {}:", order);
             for module in modules {
-                println!("\t\t{}", module);
+                println!("\t\t{}", module.lock().unwrap().get_id());
             }
         }
     }
@@ -193,15 +198,12 @@ impl Rack {
     pub fn process_module_chain(&mut self) {
         let order_max = self.get_order_max().unwrap_or(&0).to_owned();
 
-        // Process modules in order_max
+        // Process modules in order
         // FIXME - This has potential to be parallelised as modules of
         // equal order should be able to process at the same time
         for position in 1..=order_max {
-            for module in self.module_chain.get_mut(&position).unwrap().iter() {
-
-                let next_module = self.modules.get_mut(module).unwrap();
-
-                next_module.process_inputs();
+            for module in self.module_chain.get_mut(&position).unwrap() {
+                module.lock().unwrap().process_inputs();
             }
         }
 
