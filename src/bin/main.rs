@@ -66,19 +66,14 @@ fn main() -> ModuleResult<()> {
     thread::scope(|c_scope| {
             let (quit_tx, quit_rx) = mpsc::sync_channel(1);
             c_scope.spawn(move || {
-                //let mut x = 0;
                 loop {
-                    //let mut running = { *s_rack_ref.lock().unwrap().running.get_mut() };
                     while *s_rack_ref.lock().unwrap().running.get_mut() {
                         { s_rack_ref.lock().unwrap().process_module_chain(); }
-
                     }
                     match quit_rx.try_recv() {
                         Ok(_) => break,
                         Err(_) => continue,
                     }
-
-                    //if quit { break };
                 }
             });
 
