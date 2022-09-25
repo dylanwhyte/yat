@@ -53,14 +53,6 @@ fn main() -> ModuleResult<()> {
 
     { rack.lock().unwrap().connect_modules("osc", "audio_out", "audio_out", "audio_in")?; }
 
-
-    { rack.lock().unwrap().print_connection("lfo1", "osc"); }
-
-    { rack.lock().unwrap().print_connection("osc", "audio_out"); }
-
-    { rack.lock().unwrap().print_module_order(); }
-
-
     let stdin = io::stdin();
         //let controller_thread_scope =
     thread::scope(|c_scope| {
@@ -156,8 +148,8 @@ fn run<T: Sample>(device: &cpal::Device, config: &cpal::StreamConfig, audio_rx: 
 
 
     // Get sample rate and channel number from the config
-    let sample_rate = config.sample_rate.0 as f32;
-    println!("sample rate: {}", sample_rate);
+    //let sample_rate = config.sample_rate.0 as f32;
+    //println!("sample rate: {}", sample_rate);
     let channels = config.channels as usize;
 
     let err_fn = |err| eprintln!("an error occurred on the stream: {}", err);

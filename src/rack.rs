@@ -158,29 +158,45 @@ impl Rack {
         // TODO
     }
 
-    pub fn list_ports(&self) {
-        println!("Ports:");
-        for (module_id, module) in &self.modules {
-            println!("Module - {}:", module_id);
+    pub fn print_ports(&self, module_id: Option<&str>) {
+        if let Some(module_id) = module_id {
+            //if self.modules.contains_key(module_id) {
+            if let Some(module) = self.modules.get(module_id) {
+                println!("Module - {}:", module_id);
 
-            println!("\tinputs:");
-            for id in module.lock().unwrap().get_in_ports() {
-                println!("\t\t{}", id);
+                println!("\tinputs:");
+                for id in module.lock().unwrap().get_in_ports() {
+                    println!("\t\t{}", id);
+                }
+                println!("\toutputs:");
+                for id in module.lock().unwrap().get_out_ports() {
+                    println!("\t\t{}", id);
+                }
+                println!();
             }
-            println!("\toutputs:");
-            for id in module.lock().unwrap().get_out_ports() {
-                println!("\t\t{}", id);
+        } else {
+            for (module_id, module) in &self.modules {
+                println!("Module - {}:", module_id);
+
+                println!("\tinputs:");
+                for id in module.lock().unwrap().get_in_ports() {
+                    println!("\t\t{}", id);
+                }
+                println!("\toutputs:");
+                for id in module.lock().unwrap().get_out_ports() {
+                    println!("\t\t{}", id);
+                }
+                println!();
             }
-            println!();
         }
     }
 
     /// Print the connections between a Rack's items
     pub fn print_connection(&self, module_a: &str, module_b: &str) {
-        let module_a = self.modules.get(module_a).unwrap();
-        let module_b = self.modules.get(module_b).unwrap();
+        //let module_a = self.modules.get(module_a).unwrap();
+        //let module_b = self.modules.get(module_b).unwrap();
 
-        println!("{} : {}", module_a.lock().unwrap().get_id(), module_b.lock().unwrap().get_id());
+        //println!("{} : {}", module_a.lock().unwrap().get_id(), module_b.lock().unwrap().get_id());
 
         // TODO
     }
