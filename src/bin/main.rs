@@ -15,9 +15,6 @@ use yat::audo_out::AudioOut;
 
 
 fn main() -> ModuleResult<()> {
-    //let audio_out_port = setup_audio_thread();
-    //let audio_out_port = Arc::new(RwLock::new(None));
-
     let (audio_out, audio_rx) = AudioOut::new(String::from("audio_out"));
     let rack = Arc::new(Mutex::new(Rack::new()));
 
