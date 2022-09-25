@@ -82,6 +82,50 @@ fn main() -> ModuleResult<()> {
                 } else if command == "run" {
                     println!("running...");
                     c_scope.spawn(|| { c_rack_ref.lock().unwrap().run() });
+                } else if command.starts_with("add") {
+                    let mut split_command = command.split(" ");
+                    if command.split(" ").count() != 3 {
+                        println!("usage: add <module_type> <module_id>");
+                    } else {
+                        let module_type = split_command.nth(1).unwrap();
+                        let module_id = split_command.nth(0).unwrap();
+                        c_rack_ref.lock().unwrap().add_module_type(module_type, module_id);
+                    }
+                } else if command.starts_with("connect") {
+                    let mut split_command = command.split(" ");
+                    if command.split(" ").count() != 5 {
+                        println!("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>");
+                    } else {
+                        let out_module_id = split_command.nth(1).unwrap();
+                        let out_port_id = split_command.nth(0).unwrap();
+                        let in_module_id = split_command.nth(0).unwrap();
+                        let in_port_id = split_command.nth(0).unwrap();
+                        match c_rack_ref.lock().unwrap().connect_modules(
+                            out_module_id,
+                            out_port_id,
+                            in_module_id,
+                            in_port_id
+                            ) {
+                            Ok(_) => (),
+                            Err(_) => println!("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>"),
+                        }
+                    }
+                } else if command.starts_with("print") {
+                    if command.split(" ").count() == 2 {
+                        match command.split(" ").nth(1).unwrap() {
+                            "modules" => c_rack_ref.lock().unwrap().print_modules(),
+                            "module-order" => c_rack_ref.lock().unwrap().print_module_order(),
+                            "ports" => c_rack_ref.lock().unwrap().print_ports(None),
+                            _ => println!("usage: print <modules|module-order|ports [module_id]>"),
+                        }
+                    } else if command.split(" ").count() == 3 {
+                        match command.split(" ").nth(1).unwrap() {
+                            "ports" => c_rack_ref.lock().unwrap().print_ports(Some(command.split(" ").nth(2).unwrap())),
+                            _ => println!("usage: print <modules|module-order|ports [module_id]>"),
+                        }
+                    } else {
+                        println!("usage: print <modules|module-order|ports [module_id]>");
+                    }
                 } else {
                     println!("Unknown command: {}", command);
                 }
@@ -148,8 +192,6 @@ fn run<T: Sample>(device: &cpal::Device, config: &cpal::StreamConfig, audio_rx: 
 
 
     // Get sample rate and channel number from the config
-    //let sample_rate = config.sample_rate.0 as f32;
-    //println!("sample rate: {}", sample_rate);
     let channels = config.channels as usize;
 
     let err_fn = |err| eprintln!("an error occurred on the stream: {}", err);

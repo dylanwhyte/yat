@@ -9,6 +9,7 @@ use crate::clock::Clock;
 use crate::cpal_config::CpalConfig;
 use crate::io_module_trait::IoModuleTrait;
 use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
+use crate::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
@@ -56,6 +57,17 @@ impl Rack {
     pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModuleTrait + Send + Sync>>) {
         let module_id = { module.lock().unwrap().get_id().clone() };
         self.modules.insert(module_id, module);
+    }
+
+    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) {
+        let module = match module_type {
+            "osc" => {
+                Oscillator::new(module_id.into(), self.clock.time.clone())
+            },
+            _ => { println!("module type '{}' does not exist", module_type); return; },
+        };
+
+        self.modules.insert(module_id.into(), Arc::new(Mutex::new(module)));
     }
 
     /// Conect two modules via the given ports
@@ -113,12 +125,18 @@ impl Rack {
 
         let out_module_order = { out_module.lock().unwrap().get_module_order() };
         let in_module_order = { in_module.lock().unwrap().get_module_order() };
+
         match (out_module_order, in_module_order) {
             (None, None) => {
                 out_module.lock().unwrap().set_module_order(Some(1));
                 in_module.lock().unwrap().set_module_order(Some(2));
             },
             (None, Some(order)) => {
+                // TODO: is there a faster way to remove an item at an unknown location
+                self.module_chain.get_mut(&order).unwrap()
+                    .retain(|module| {
+                        !Arc::ptr_eq(module, &in_module)
+                    });
                 if order == 1 {
                     out_module.lock().unwrap().set_module_order(Some(order));
                     in_module.lock().unwrap().set_module_order(Some(order + 1));
@@ -128,9 +146,23 @@ impl Rack {
                 }
             },
             (Some(order), None) => {
+                self.module_chain.get_mut(&order).unwrap()
+                    .retain(|module| {
+                        !Arc::ptr_eq(module, &out_module)
+                    });
                 in_module.lock().unwrap().set_module_order(Some(order + 1));
             },
-            (Some(_), Some(order)) => { in_module.lock().unwrap().set_module_order(Some(order + 1)); },
+            (Some(_), Some(order)) => {
+                self.module_chain.get_mut(&out_module_order.unwrap()).unwrap()
+                    .retain(|module| {
+                        !Arc::ptr_eq(module, &out_module)
+                    });
+                self.module_chain.get_mut(&order).unwrap()
+                    .retain(|module| {
+                        !Arc::ptr_eq(module, &in_module)
+                    });
+                in_module.lock().unwrap().set_module_order(Some(order + 1));
+            },
         }
 
         // Add entry to module position for this functions order
@@ -208,6 +240,13 @@ impl Rack {
             for module in modules {
                 println!("\t\t{}", module.lock().unwrap().get_id());
             }
+        }
+    }
+
+    pub fn print_modules(&self) {
+        println!("Modules:");
+        for module in self.modules.keys() {
+            println!("\t{}", module);
         }
     }
 
