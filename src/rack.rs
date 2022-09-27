@@ -132,7 +132,6 @@ impl Rack {
                 in_module.lock().unwrap().set_module_order(Some(2));
             },
             (None, Some(order)) => {
-                // TODO: is there a faster way to remove an item at an unknown location
                 self.module_chain.get_mut(&order).unwrap()
                     .retain(|module| {
                         !Arc::ptr_eq(module, &in_module)
@@ -239,11 +238,6 @@ impl Rack {
 
     /// Print the connections between a Rack's items
     pub fn print_connection(&self, module_a: &str, module_b: &str) {
-        //let module_a = self.modules.get(module_a).unwrap();
-        //let module_b = self.modules.get(module_b).unwrap();
-
-        //println!("{} : {}", module_a.lock().unwrap().get_id(), module_b.lock().unwrap().get_id());
-
         // TODO
     }
 
