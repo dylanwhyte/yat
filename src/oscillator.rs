@@ -2,8 +2,8 @@
 use hashbrown::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-use crate::types::{IoPort,SampleType};
-use crate::io_module_trait::IoModuleTrait;
+use crate::types::{IoPort,SampleType, PortResult, PortNotFoundError};
+use crate::io_module::IoModule;
 
 /// An oscillator IoModule
 pub struct Oscillator {
@@ -58,7 +58,7 @@ impl PartialEq for Oscillator {
     }
 }
 
-impl IoModuleTrait for Oscillator {
+impl IoModule for Oscillator {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
         let pi: SampleType = 3.14159265359;

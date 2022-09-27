@@ -3,9 +3,9 @@
 use hashbrown::{HashMap, HashSet};
 use std::fmt;
 
-use crate::types::{IoPort, SampleType};
+use crate::types::{IoPort, SampleType, PortResult};
 
-pub trait IoModuleTrait {
+pub trait IoModule {
     /// Calculate the module's outputs based on inputs
     fn process_inputs(&mut self);
 
@@ -25,7 +25,7 @@ pub trait IoModuleTrait {
     fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort>;
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort);
+    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String>;
 
     /// Get a modules processing order
     fn get_module_order(&self) -> Option<u64>;

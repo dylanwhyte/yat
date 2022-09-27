@@ -7,8 +7,8 @@ use std::thread;
 use cpal::{Data, Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
-use crate::types::{AUDIO_BUF_SIZE, IoPort, SampleType};
-use crate::io_module_trait::IoModuleTrait;
+use crate::types::{AUDIO_BUF_SIZE, IoPort, PortResult, PortNotFoundError, SampleType};
+use crate::io_module::IoModule;
 
 /// An oscillator IoModule
 pub struct AudioOut {
@@ -59,7 +59,7 @@ impl PartialEq for AudioOut {
     }
 }
 
-impl IoModuleTrait for AudioOut {
+impl IoModule for AudioOut {
     fn process_inputs(&mut self) {
         let audio_in = *self.in_audio_in.read().unwrap();
 

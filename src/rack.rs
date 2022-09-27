@@ -7,17 +7,17 @@ use cpal::traits::{HostTrait, DeviceTrait};
 
 use crate::clock::Clock;
 use crate::cpal_config::CpalConfig;
-use crate::io_module_trait::IoModuleTrait;
+use crate::io_module::IoModule;
 use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
 use crate::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
     /// A map of IoBlocks, using their IDs as identifier
-    modules: HashMap<String, Arc<Mutex<dyn IoModuleTrait + Send + Sync>>>,
+    modules: HashMap<String, Arc<Mutex<dyn IoModule + Send + Sync>>>,
 
     /// Ordered modules for sequential processing
-    module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModuleTrait + Send + Sync>>>>,
+    module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
 
     //module_chain: Vec<String>,
     pub clock: Clock,
@@ -54,7 +54,7 @@ impl Rack {
     }
 
     /// Add a new module to the Rack
-    pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModuleTrait + Send + Sync>>) {
+    pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModule + Send + Sync>>) {
         let module_id = { module.lock().unwrap().get_id().clone() };
         self.modules.insert(module_id, module);
     }
