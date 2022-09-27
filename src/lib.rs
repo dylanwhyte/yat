@@ -1,4 +1,3 @@
-#![cfg_attr(debug_assertions, allow(dead_code, unused_imports))]
 pub mod io_module;
 pub mod types;
 pub mod rack;

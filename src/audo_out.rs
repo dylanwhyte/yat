@@ -1,11 +1,5 @@
-//use std::collections::{HashMap, HashSet};
-use hashbrown::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{self, sync_channel, SyncSender, Receiver};
-use std::thread;
-
-use cpal::{Data, Sample, SampleFormat};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::sync::mpsc::{self, Receiver};
 
 use crate::types::{AUDIO_BUF_SIZE, IoPort, PortResult, PortNotFoundError, SampleType};
 use crate::io_module::IoModule;

@@ -1,5 +1,5 @@
 use cpal::{self, Host, Device, SupportedStreamConfig};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::traits::{DeviceTrait, HostTrait};
 
 pub struct CpalConfig {
     pub host: Host,

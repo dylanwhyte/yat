@@ -1,14 +1,11 @@
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
 use std::sync::{Arc, RwLock, Mutex};
 use std::sync::atomic::AtomicBool;
-
-use cpal::{SupportedStreamConfig, Host};
-use cpal::traits::{HostTrait, DeviceTrait};
 
 use crate::clock::Clock;
 use crate::cpal_config::CpalConfig;
 use crate::io_module::IoModule;
-use crate::types::{ModuleNotFoundError, SAMPLE_RATE, SampleType};
+use crate::types::ModuleNotFoundError;
 use crate::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules

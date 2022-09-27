@@ -1,9 +1,4 @@
-#![allow(dead_code)]
-//use std::collections::{HashMap, HashSet};
-use hashbrown::{HashMap, HashSet};
-use std::fmt;
-
-use crate::types::{IoPort, SampleType, PortResult};
+use crate::types::{IoPort, PortResult};
 
 pub trait IoModule {
     /// Calculate the module's outputs based on inputs
