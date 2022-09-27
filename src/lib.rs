@@ -4,7 +4,6 @@ pub mod types;
 pub mod rack;
 pub mod clock;
 pub mod cpal_config;
-pub mod app;
 
 // IoModules:
 pub mod oscillator;
