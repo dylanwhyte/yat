@@ -190,38 +190,52 @@ impl Rack {
         // TODO
     }
 
-    pub fn print_ports(&self, module_id: Option<&str>) {
-        if let Some(module_id) = module_id {
-            //if self.modules.contains_key(module_id) {
-            if let Some(module) = self.modules.get(module_id) {
-                println!("Module - {}:", module_id);
+	pub fn print_ports(&self, module_id: Option<&str>) -> String {
+		let mut output = String::from("Ports: \n");
+		if let Some(module_id) = module_id {
+			//if self.modules.contains_key(module_id) {
+			if let Some(module) = self.modules.get(module_id) {
+				output.push_str("Module - ");
+				output.push_str(module_id);
+				output.push_str(":\n");
 
-                println!("\tinputs:");
-                for id in module.lock().unwrap().get_in_ports() {
-                    println!("\t\t{}", id);
-                }
-                println!("\toutputs:");
-                for id in module.lock().unwrap().get_out_ports() {
-                    println!("\t\t{}", id);
-                }
-                println!();
-            }
-        } else {
-            for (module_id, module) in &self.modules {
-                println!("Module - {}:", module_id);
+				output.push_str("    inputs:\n");
+				for id in module.lock().unwrap().get_in_ports() {
+					output.push_str("        ");
+					output.push_str(id);
+					output.push_str("\n");
+				}
+				output.push_str("    outputs:\n");
+				for id in module.lock().unwrap().get_out_ports() {
+					output.push_str("        ");
+					output.push_str(id);
+					output.push_str("\n");
+				}
+			}
+		} else {
+			for (module_id, module) in &self.modules {
+				output.push_str("Module - ");
+				output.push_str(module_id);
+				output.push_str(":\n");
 
-                println!("\tinputs:");
-                for id in module.lock().unwrap().get_in_ports() {
-                    println!("\t\t{}", id);
-                }
-                println!("\toutputs:");
-                for id in module.lock().unwrap().get_out_ports() {
-                    println!("\t\t{}", id);
-                }
-                println!();
-            }
-        }
-    }
+				output.push_str("    inputs:\n");
+				for id in module.lock().unwrap().get_in_ports() {
+					output.push_str("        ");
+					output.push_str(id);
+					output.push_str("\n");
+				}
+				output.push_str("    outputs:\n");
+				for id in module.lock().unwrap().get_out_ports() {
+					output.push_str("        ");
+					output.push_str(id);
+					output.push_str("\n");
+				}
+			}
+		}
+
+		output.push_str("\n");
+		output
+		}
 
     /// Print the connections between a Rack's items
     pub fn print_connection(&self, module_a: &str, module_b: &str) {
@@ -233,21 +247,33 @@ impl Rack {
         // TODO
     }
 
-    pub fn print_module_order(&self) {
-        println!("Module order:");
+    pub fn print_module_order(&self) -> String {
+		let mut output = String::from("Module order:\n");
         for (order, modules) in self.module_chain.iter() {
-            println!("\tModules in position {}:", order);
+            output.push_str("    Modules in position ");
+            output.push_str(&order.to_string());
+            output.push_str(":\n");
             for module in modules {
-                println!("\t\t{}", module.lock().unwrap().get_id());
+                output.push_str("        ");
+				output.push_str(module.lock().unwrap().get_id());
+                output.push_str("\n");
             }
         }
+
+		output.push_str("\n");
+		output
     }
 
-    pub fn print_modules(&self) {
-        println!("Modules:");
+    pub fn print_modules(&self) -> String {
+		let mut output = String::from("Modules:\n");
         for module in self.modules.keys() {
-            println!("\t{}", module);
+			output.push_str("    ");
+			output.push_str(module);
+			output.push_str("\n");
         }
+
+		output.push_str("\n");
+		output
     }
 
     pub fn process_module_chain(&mut self) {
