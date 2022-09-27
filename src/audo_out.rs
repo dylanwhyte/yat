@@ -95,12 +95,15 @@ impl IoModule for AudioOut {
     }
 
     /// Set the value of a module's input port
-    // TODO: Handle non-existent port case
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) {
+    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
-            "audio_in" => {self.in_audio_in = out_port.clone() }
-            _ => (),
+            "audio_in" => {
+                self.in_audio_in = out_port.clone();
+            }
+            _ => { return  Err(PortNotFoundError); },
         }
+
+        Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
     }
 
     fn get_module_order(&self) -> Option<u64> {

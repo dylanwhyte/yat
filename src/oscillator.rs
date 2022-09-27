@@ -108,14 +108,14 @@ impl IoModule for Oscillator {
     }
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) {
+    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
-            "amp" => {
-                self.in_amp = out_port.clone(); }
-            "freq" => {
-                self.in_freq = out_port.clone(); }
-            _ => println!("port does not exist"),
+            "amp" => self.in_amp = out_port.clone(),
+            "freq" => self.in_freq = out_port.clone(),
+            _ => { return Err(PortNotFoundError) },
         }
+
+        Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
     }
 
     fn get_module_order(&self) -> Option<u64> {
