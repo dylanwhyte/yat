@@ -6,5 +6,6 @@ pub mod cpal_config;
 
 // IoModules:
 pub mod oscillator;
+pub mod control;
 pub mod audo_out;
 

@@ -3,15 +3,19 @@ use std::sync::{Arc, RwLock, Mutex};
 use std::sync::atomic::AtomicBool;
 
 use crate::clock::Clock;
+use crate::control::Control;
 use crate::cpal_config::CpalConfig;
 use crate::io_module::IoModule;
-use crate::types::ModuleNotFoundError;
+use crate::types::{ModuleResult, ModuleNotFoundError, SampleType};
 use crate::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
     /// A map of IoBlocks, using their IDs as identifier
     modules: HashMap<String, Arc<Mutex<dyn IoModule + Send + Sync>>>,
+
+    /// Controls: these don't require an order to be processed
+    controls: HashMap<String, Control>,
 
     /// Ordered modules for sequential processing
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
@@ -29,6 +33,7 @@ impl Rack {
     /// Create a new, empty Rack
     pub fn new() -> Self {
         let modules = HashMap::new();
+        let controls = HashMap::new();
         let module_chain = HashMap::new();
         let clock = Clock::new();
         let running = AtomicBool::new(false);
@@ -38,6 +43,7 @@ impl Rack {
 
         Self {
             modules,
+            controls,
             module_chain,
             clock,
             running,
@@ -57,14 +63,19 @@ impl Rack {
     }
 
     pub fn add_module_type(&mut self, module_type: &str, module_id: &str) {
+        if module_type == "ctrl" {
+            self.controls.insert(module_id.into(), Control::new(module_id.into()));
+            return;
+        }
+
         let module = match module_type {
             "osc" => {
-                Oscillator::new(module_id.into(), self.clock.time.clone())
+                Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.time.clone())))
             },
             _ => { println!("module type '{}' does not exist", module_type); return; },
         };
 
-        self.modules.insert(module_id.into(), Arc::new(Mutex::new(module)));
+        self.modules.insert(module_id.into(), module);
     }
 
     /// Conect two modules via the given ports
@@ -184,6 +195,31 @@ impl Rack {
 
     pub fn disconnect_modules(&mut self) {
         // TODO
+    }
+
+    pub fn connect_ctrl(&mut self, ctrl_id: &str, in_module_id: &str, in_port_id: &str) {
+        // TODO: Add proper error handling
+        let control = match self.controls.get(ctrl_id) {
+            Some(control) => control,
+            None => return,
+        };
+
+        let in_module = self.modules.get(in_module_id);
+
+        match in_module {
+            Some(module) => { module.lock().unwrap().set_in_port(in_port_id, control.get_port_reference()); },
+            None => return,
+        }
+
+    }
+
+    pub fn set_ctrl_value(&mut self, ctrl_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
+        match self.controls.get(ctrl_id) {
+            Some(ctrl) => ctrl.set_value(value),
+            None => return Err(ModuleNotFoundError),
+        }
+
+        Ok(format!("Updated control {}", ctrl_id))
     }
 
 	pub fn print_ports(&self, module_id: Option<&str>) -> String {
