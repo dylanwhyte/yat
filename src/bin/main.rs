@@ -158,9 +158,7 @@ impl App {
                                     }
                                 } else if self.commands.last().unwrap().starts_with("connect") {
                                     let mut split_command = self.commands.last().unwrap().split(" ");
-                                    if self.commands.last().unwrap().split(" ").count() != 5 {
-                                        self.messages.push("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
-                                    } else {
+                                    if self.commands.last().unwrap().split(" ").count() == 5 {
                                         let out_module_id = split_command.nth(1).unwrap();
                                         let out_port_id = split_command.nth(0).unwrap();
                                         let in_module_id = split_command.nth(0).unwrap();
@@ -174,6 +172,25 @@ impl App {
                                             Ok(_) => (),
                                             Err(_) => self.messages.push("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into()),
                                         }
+                                    } else if self.commands.last().unwrap().split(" ").count() == 4 {
+                                        // TODO: Add proper error handling
+                                        let ctrl_id = split_command.nth(1).unwrap();
+                                        let in_module_id = split_command.nth(0).unwrap();
+                                        let in_port_id = split_command.nth(0).unwrap();
+                                        c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
+                                    } else {
+                                        self.messages.push("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
+                                    }
+                                } else if self.commands.last().unwrap().starts_with("set") {
+                                    let mut split_command = self.commands.last().unwrap().split(" ");
+                                    if self.commands.last().unwrap().split(" ").count() != 3 {
+                                        self.messages.push("usage: set <ctrl_id> <value>\n".into());
+                                    } else {
+                                        let ctrl_id = split_command.nth(1).unwrap();
+                                        let value = split_command.nth(0).unwrap().parse().ok();
+
+                                        // TODO: Add proper error handling
+                                        c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value);
                                     }
                                 } else if self.commands.last().unwrap().starts_with("print") {
                                     if self.commands.last().unwrap().split(" ").count() == 2 {
