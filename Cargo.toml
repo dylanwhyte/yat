@@ -1,6 +1,9 @@
 [package]
 name = "yat"
 version = "0.1.63"
+authors = ["Dylan Whyte <dylantwhyte@proton.me>"]
+description = "A rust-based TUI modular synthesizer"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
