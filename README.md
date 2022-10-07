@@ -8,7 +8,7 @@
 
 yat is a TUI-based modular synthesizer written in Rust. The project started as a
 way to improve my knowledge of Rust and DSP, and is still very much a  work in
-progress.
+progress and breaking changes will be plentiful.
 
 ## License
 
