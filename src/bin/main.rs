@@ -329,10 +329,7 @@ impl App {
 
         // NEXT WIDGET
         match self.input_mode {
-            InputMode::Normal =>
-                // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
-            {},
-
+            InputMode::Normal => {},
             InputMode::Editing => {
                 // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
                 f.set_cursor(
@@ -341,7 +338,8 @@ impl App {
                     // Move one line down, from the border to the input line
                     top_chunks[1].y + 1,
                 )
-            }
+            },
+            InputMode::Control => {},
         }
 
         let bottom_chunks = Layout::default()
