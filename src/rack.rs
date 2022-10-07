@@ -325,6 +325,16 @@ impl Rack {
         }
 
 		output.push_str("\n");
+
+        output.push_str("Controls:\n");
+        for control in self.controls.keys() {
+			output.push_str("    ");
+			output.push_str(control);
+			output.push_str("\n");
+        }
+
+		output.push_str("\n");
+
 		output
     }
 
