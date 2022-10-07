@@ -1,6 +1,6 @@
 [package]
 name = "yat"
-version = "0.1.63"
+version = "0.1.64"
 authors = ["Dylan Whyte <dylantwhyte@proton.me>"]
 description = "A rust-based TUI modular synthesizer"
 license = "MIT OR Apache-2.0"
