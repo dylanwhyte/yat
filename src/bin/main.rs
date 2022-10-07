@@ -344,8 +344,22 @@ impl App {
 
         let bottom_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(40), Constraint::Percentage(20)].as_ref())
             .split(chunks[1]);
+
+        let commands: Vec<ListItem> = self
+            .commands
+            .iter()
+            .enumerate()
+            .map(|(i, m)| {
+                let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+                ListItem::new(content)
+            })
+        .collect();
+
+        let command_history =
+            List::new(commands).block(Block::default().borders(Borders::ALL).title("Command Histroy"));
+        f.render_widget(command_history, bottom_chunks[0]);
 
         let messages: Vec<ListItem> = self
             .messages
@@ -359,7 +373,7 @@ impl App {
 
         let messages =
             List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
-        f.render_widget(messages, bottom_chunks[0]);
+        f.render_widget(messages, bottom_chunks[1]);
 
         let mut modules = { self.rack.lock().unwrap().print_modules() };
         modules.push_str(&self.rack.lock().unwrap().print_module_order());
@@ -369,7 +383,7 @@ impl App {
         let module_list = Paragraph::new(modules)
             .style(Style::default())
             .block(Block::default().borders(Borders::ALL).title("Modules"));
-        f.render_widget(module_list, bottom_chunks[1]);
+        f.render_widget(module_list, bottom_chunks[2]);
     }
 
     fn setup_audio_thread(
