@@ -56,6 +56,7 @@ fn main() -> Result<(), io::Error> {
 
 enum InputMode {
     Normal,
+    Control,
     Editing,
 }
 
@@ -120,17 +121,29 @@ impl App {
                 if let Event::Key(key) = event::read()? {
                     match self.input_mode {
                         InputMode::Normal => match key.code {
+                            KeyCode::Char('c') => {
+                                self.input_mode = InputMode::Control;
+                            },
                             KeyCode::Char('e') => {
                                 self.input_mode = InputMode::Editing;
-                            }
+                            },
                             KeyCode::Char('q') => {
                                 self.messages.push("Quiting...\n".into());
                                 c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
                                 quit_tx.send(true).unwrap();
                                 return Ok(());
-                            }
+                            },
                             _ => {}
                         },
+                        InputMode::Control => match key.code {
+                            KeyCode::Char(char) => {
+                                c_rack_ref.lock().unwrap().send_control_key(char);
+                            }
+                            KeyCode::Esc => {
+                                self.input_mode = InputMode::Normal;
+                            },
+                            _ => {}
+                        }
                         InputMode::Editing => match key.code {
                             KeyCode::Enter => {
 
@@ -191,6 +204,16 @@ impl App {
 
                                         // TODO: Add proper error handling
                                         c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value);
+                                    }
+                                } else if self.commands.last().unwrap().starts_with("focus") {
+                                    let mut split_command = self.commands.last().unwrap().split(" ");
+
+                                    if self.commands.last().unwrap().split(" ").count() != 2 {
+                                        self.messages.push("usage: focus <ctrl_id>\n".into());
+                                    } else {
+                                        let ctrl_id = split_command.nth(1).unwrap();
+
+                                        c_rack_ref.lock().unwrap().set_focus_control(ctrl_id);
                                     }
                                 } else if self.commands.last().unwrap().starts_with("print") {
                                     if self.commands.last().unwrap().split(" ").count() == 2 {
@@ -263,7 +286,9 @@ impl App {
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to exit, "),
                 Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to start editing."),
+                Span::raw(" to start editing or "),
+                Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to enter control mode."),
                 ],
                 Style::default().add_modifier(Modifier::RAPID_BLINK),
             ),
@@ -274,6 +299,15 @@ impl App {
                 Span::raw(" to stop editing, "),
                 Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to record the message"),
+                ],
+                Style::default(),
+            ),
+            InputMode::Control => (
+                vec![
+                Span::raw("Press "),
+                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to exit control mode, "),
+                Span::raw("or other keys to alter the control"),
                 ],
                 Style::default(),
             ),
@@ -288,6 +322,7 @@ impl App {
             .style(match self.input_mode {
                 InputMode::Normal => Style::default(),
                 InputMode::Editing => Style::default().fg(Color::Yellow),
+                InputMode::Control => Style::default().fg(Color::Blue),
             })
         .block(Block::default().borders(Borders::ALL).title("Input"));
         f.render_widget(input, top_chunks[1]);
@@ -296,7 +331,7 @@ impl App {
         match self.input_mode {
             InputMode::Normal =>
                 // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
-            {}
+            {},
 
             InputMode::Editing => {
                 // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
