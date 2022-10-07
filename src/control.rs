@@ -1,42 +1,17 @@
-use std::sync::{Arc, RwLock};
-
 use crate::types::{IoPort, SampleType};
 
-/// An control IoModule
-pub struct Control {
-    /// A unique string used for identifying the module
-    id: String,
+/// A trait for implementng controls.
+/// In the context of a Rack, controls are a special type of module which are not ordered, as they
+/// are controlled concurrently and don't take an input from other modules.
+pub trait Control {
+    /// Get a reference to the control's output port
+    fn get_port_reference(&self) -> IoPort;
 
-    /// The control's output value
-    out_value: IoPort,
-}
+    /// Set the controls output value
+    fn set_value(&self, new_value: Option<SampleType>);
 
-impl Control {
-    /// Create a new, unordered IoModule
-    pub fn new(id: String) -> Self {
-        let out_value = Arc::new(RwLock::new(None));
-
-        Self {
-            id,
-            out_value,
-        }
-    }
-
-    pub fn get_port_reference(&self) -> IoPort {
-        self.out_value.clone()
-    }
-
-    pub fn set_value(&self, new_value: Option<SampleType>) {
-        if let Ok(mut value) = self.out_value.write() {
-            *value = new_value;
-        }
-    }
-
-}
-
-impl PartialEq for Control {
-    fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
-    }
+    /// Receive and handle a control key. This allows the control to listen for commands and update
+    /// it's output accordingly (somewhat akin to a module's processing function)
+    fn recv_control_key(&self, key: char);
 }
 

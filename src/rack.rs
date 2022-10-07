@@ -4,6 +4,7 @@ use std::sync::atomic::AtomicBool;
 
 use crate::clock::Clock;
 use crate::control::Control;
+use crate::control_knob::ControlKnob;
 use crate::cpal_config::CpalConfig;
 use crate::io_module::IoModule;
 use crate::types::{ModuleResult, ModuleNotFoundError, SampleType};
@@ -15,7 +16,10 @@ pub struct Rack {
     modules: HashMap<String, Arc<Mutex<dyn IoModule + Send + Sync>>>,
 
     /// Controls: these don't require an order to be processed
-    controls: HashMap<String, Control>,
+    controls: HashMap<String, Arc<Mutex<dyn Control + Send + Sync>>>,
+
+    /// The control which currently holds the focus
+    focussed_control: Option<Arc<Mutex<dyn Control + Send + Sync>>>,
 
     /// Ordered modules for sequential processing
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
@@ -34,6 +38,7 @@ impl Rack {
     pub fn new() -> Self {
         let modules = HashMap::new();
         let controls = HashMap::new();
+        let focussed_control = None;
         let module_chain = HashMap::new();
         let clock = Clock::new();
         let running = AtomicBool::new(false);
@@ -44,6 +49,7 @@ impl Rack {
         Self {
             modules,
             controls,
+            focussed_control,
             module_chain,
             clock,
             running,
@@ -64,7 +70,8 @@ impl Rack {
 
     pub fn add_module_type(&mut self, module_type: &str, module_id: &str) {
         if module_type == "ctrl" {
-            self.controls.insert(module_id.into(), Control::new(module_id.into()));
+            let control_knob = Arc::new(Mutex::new(ControlKnob::new(module_id.into())));
+            self.controls.insert(module_id.into(),control_knob);
             return;
         }
 
@@ -207,15 +214,33 @@ impl Rack {
         let in_module = self.modules.get(in_module_id);
 
         match in_module {
-            Some(module) => { module.lock().unwrap().set_in_port(in_port_id, control.get_port_reference()); },
+            Some(module) => {
+                module.lock().unwrap().set_in_port(in_port_id, control.lock().unwrap().get_port_reference());
+            },
             None => return,
         }
 
     }
 
+    pub fn set_focus_control(&mut self, ctrl_id: &str) -> ModuleResult<String> {
+        let control = self.controls.get(ctrl_id);
+        match control {
+            Some(ctrl) => self.focussed_control = Some(ctrl.clone()),
+            None => return Err(ModuleNotFoundError),
+        }
+
+        Ok(format!("{} focussed", ctrl_id))
+    }
+
+    pub fn send_control_key(&self, key: char) {
+        if let Some(control) = &self.focussed_control {
+            control.lock().unwrap().recv_control_key(key);
+        }
+    }
+
     pub fn set_ctrl_value(&mut self, ctrl_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
         match self.controls.get(ctrl_id) {
-            Some(ctrl) => ctrl.set_value(value),
+            Some(ctrl) => ctrl.lock().unwrap().set_value(value),
             None => return Err(ModuleNotFoundError),
         }
 
