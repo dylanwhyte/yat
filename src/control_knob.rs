@@ -1,4 +1,3 @@
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, RwLock};
 
 use crate::types::{IoPort, SampleType};
@@ -11,21 +10,16 @@ pub struct ControlKnob {
 
     /// The control's output value
     out_value: IoPort,
-
-    /// check if the control is focussed
-    has_focus: AtomicBool,
 }
 
 impl ControlKnob {
     /// Create a new, unordered IoModule
     pub fn new(id: String) -> Self {
         let out_value = Arc::new(RwLock::new(None));
-        let has_focus = AtomicBool::new(false);
 
         Self {
             id,
             out_value,
-            has_focus,
         }
     }
 }
