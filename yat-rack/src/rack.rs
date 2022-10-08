@@ -1,14 +1,14 @@
 use hashbrown::HashMap;
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::{Arc, RwLock, Mutex, Condvar};
 use std::sync::atomic::AtomicBool;
 
 use crate::clock::Clock;
-use crate::control::Control;
-use crate::control_knob::ControlKnob;
+use crate::controls::control::Control;
+use crate::controls::control_knob::ControlKnob;
 use crate::cpal_config::CpalConfig;
-use crate::io_module::IoModule;
+use crate::modules::io_module::IoModule;
 use crate::types::{ModuleResult, ModuleNotFoundError, SampleType};
-use crate::oscillator::Oscillator;
+use crate::modules::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
@@ -28,6 +28,7 @@ pub struct Rack {
     pub clock: Clock,
 
     pub running: AtomicBool,
+    //pub running: Arc<(Mutex<bool>, Condvar)>,
 
     // cpal host, device and config
     cpal_config: Arc<RwLock<CpalConfig>>,
@@ -42,6 +43,7 @@ impl Rack {
         let module_chain = HashMap::new();
         let clock = Clock::new();
         let running = AtomicBool::new(false);
+        //let running = Arc::new((Mutex::new(false), Condvar::new()));
 
         let cpal_config = Arc::new(RwLock::new(CpalConfig::new()));
 
@@ -295,7 +297,7 @@ impl Rack {
 		}
 
     /// Print the connections between a Rack's items
-    pub fn print_connection(&self, module_a: &str, module_b: &str) {
+    pub fn print_connection(&self, _module_a: &str, _module_b: &str) {
         // TODO
     }
 

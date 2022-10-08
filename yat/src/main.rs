@@ -22,9 +22,9 @@ use tui::{
 
 use unicode_width::UnicodeWidthStr;
 
-use yat::types::SampleType;
-use yat::rack::Rack;
-use yat::audo_out::AudioOut;
+use yat_rack::types::SampleType;
+use yat_rack::rack::Rack;
+use yat_rack::modules::audio_out::AudioOut;
 
 fn main() -> Result<(), io::Error> {
 	// setup terminal
@@ -103,7 +103,9 @@ impl App {
 
         let (quit_tx, quit_rx) = mpsc::sync_channel(1);
         thread::scope(|c_scope| {
+            //let running_pair = Arc::clone(&s_rack_ref.lock().unwrap().running);
             c_scope.spawn(move || {
+                // TODO: Use std::sync::Convar to actually block CPU
                 loop {
                     while *s_rack_ref.lock().unwrap().running.get_mut() {
                         { s_rack_ref.lock().unwrap().process_module_chain(); }

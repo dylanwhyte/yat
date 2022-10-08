@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{self, Receiver};
 
-use crate::types::{AUDIO_BUF_SIZE, IoPort, PortResult, PortNotFoundError, SampleType};
-use crate::io_module::IoModule;
+use crate::types::{IoPort, PortResult, PortNotFoundError};
+use crate::modules::io_module::IoModule;
 
-/// An oscillator IoModule
-pub struct AudioOut {
+/// A module which outputs the remainder of one
+/// input (in_a) divided by the other (in_b)
+pub struct Modulo {
     /// A unique string used for identifying the module
     id: String,
 
@@ -16,48 +16,54 @@ pub struct AudioOut {
 
     output_ports: Vec<String>,
 
-    in_audio_in: IoPort,
+    in_a: IoPort,
 
-    audio_tx: mpsc::SyncSender<SampleType>,
+    in_b: IoPort,
+
+    out_result: IoPort,
 }
 
-impl AudioOut {
+impl Modulo {
     /// Create a new, unordered IoModule
-    //pub fn new(id: String, audio_out_ref: IoPort) -> (Self, Receiver<SampleType>) {
-    pub fn new(id: String) -> (Self, Receiver<SampleType>) {
+    pub fn new(id: String) -> Self {
         let order = None;
-        let input_ports = vec!["audio_in".to_string()];
-        let output_ports = vec![];
+        let input_ports = vec!["in_a".to_string(), "in_b".to_string()];
+        let output_ports = vec!["result".to_string()];
 
-        let in_audio_in = Arc::new(RwLock::new(None));
+        let in_a = Arc::new(RwLock::new(None));
+        let in_b = Arc::new(RwLock::new(None));
+        let out_result = Arc::new(RwLock::new(None));
 
-        let (audio_tx, audio_rx) = mpsc::sync_channel(AUDIO_BUF_SIZE);
-
-        let audio_out = Self {
+        Self {
             id,
             order,
             input_ports,
             output_ports,
-            in_audio_in,
-            audio_tx,
-        };
-
-        (audio_out, audio_rx)
+            in_a,
+            in_b,
+            out_result,
+        }
     }
 
 }
 
-impl PartialEq for AudioOut {
+impl PartialEq for Modulo {
     fn eq(&self, other: &Self) -> bool {
             self.id == other.id
     }
 }
 
-impl IoModule for AudioOut {
+impl IoModule for Modulo {
+    /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let audio_in = *self.in_audio_in.read().unwrap();
+        let a = self.in_a.read().unwrap().unwrap_or(0f32);
+        let b = self.in_b.read().unwrap().unwrap_or(1f32);
 
-        self.audio_tx.send(audio_in.unwrap()).unwrap();
+        let result = a % b;
+
+        if let Ok(mut value) = self.out_result.write() {
+            *value = Some(result);
+        }
     }
 
     /// Return a module's ID
@@ -73,17 +79,18 @@ impl IoModule for AudioOut {
         &self.output_ports
     }
 
-    /// Return a reference to the module's input ports
+    /// Return a reference to one of the module's input ports
     fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
         match port_id {
-            "audio_in" => Some(self.in_audio_in.clone()),
+            "a" => Some(self.in_a.clone()),
+            "b" => Some(self.in_b.clone()),
             _ => None,
         }
     }
 
     fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
         match port_id {
-            //"audio_out" => Some(self.out_audio_out.clone()),
+            "result" => Some(self.out_result.clone()),
             _ => None,
         }
     }
@@ -91,10 +98,9 @@ impl IoModule for AudioOut {
     /// Set the value of a module's input port
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
-            "audio_in" => {
-                self.in_audio_in = out_port.clone();
-            }
-            _ => { return  Err(PortNotFoundError); },
+            "a" => self.in_a = out_port.clone(),
+            "b" => self.in_b = out_port.clone(),
+            _ => { return Err(PortNotFoundError) },
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))

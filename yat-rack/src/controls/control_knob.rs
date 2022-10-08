@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crate::types::{IoPort, SampleType};
-use crate::control::Control;
+use crate::controls::control::Control;
 
 /// An control
 pub struct ControlKnob {

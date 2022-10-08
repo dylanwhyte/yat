@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crate::types::{IoPort,SampleType, PortResult, PortNotFoundError};
-use crate::io_module::IoModule;
+use crate::modules::io_module::IoModule;
 
 /// An oscillator IoModule
 pub struct Oscillator {

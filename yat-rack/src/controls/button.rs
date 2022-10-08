@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{types::{IoPort, SampleType}, control::Control};
+use crate::{types::{IoPort, SampleType}, controls::control::Control};
 
 /// An control IoModule
 pub struct Button {
