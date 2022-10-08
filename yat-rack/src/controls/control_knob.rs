@@ -46,14 +46,14 @@ impl Control for ControlKnob {
             'k' => {
                 let next_value = match *self.out_value.read().unwrap() {
                     Some(val) => Some(val + 100f32),
-                    None => None,
+                    None => Some(0f32),
                 };
                 self.set_value(next_value);
             },
             'j' => {
                 let next_value = match *self.out_value.read().unwrap() {
                     Some(val) => Some(val - 100f32),
-                    None => None,
+                    None => Some(1f32),
                 };
                 self.set_value(next_value);
             },
