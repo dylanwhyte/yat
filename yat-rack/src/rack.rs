@@ -27,13 +27,9 @@ pub struct Rack {
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
 
     //module_chain: Vec<String>,
-    pub clock: Clock,
+    pub clock: Arc<RwLock<Clock>>,
 
     pub running: AtomicBool,
-    //pub running: Arc<(Mutex<bool>, Condvar)>,
-
-    // cpal host, device and config
-    cpal_config: Arc<RwLock<CpalConfig>>,
 }
 
 impl Rack {
@@ -43,12 +39,8 @@ impl Rack {
         let controls = HashMap::new();
         let focussed_control = None;
         let module_chain = HashMap::new();
-        let clock = Clock::new();
+        let clock = Arc::new(RwLock::new(Clock::new()));
         let running = AtomicBool::new(false);
-        //let running = Arc::new((Mutex::new(false), Condvar::new()));
-
-        let cpal_config = Arc::new(RwLock::new(CpalConfig::new()));
-
 
         Self {
             modules,
@@ -377,7 +369,7 @@ impl Rack {
         }
 
         // After each module has been processed update the time for the next round of processing
-        self.clock.increment();
+        self.clock.read().unwrap().increment();
     }
 
     // Returns the highest value order in the module_chain hashmap

@@ -130,6 +130,7 @@ impl IoModule for Adsr {
             match self.adsr_state {
                 AdsrState::Inactive => {
                     if self.in_trigger.read().unwrap().unwrap_or(0f32) != 0f32 {
+                        self.trigger_time = clock.get_current_time().unwrap();
                         self.adsr_state = AdsrState::Attack;
                     }
                 },
