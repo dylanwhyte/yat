@@ -26,14 +26,22 @@ impl ControlKnob {
 
 impl Control for ControlKnob {
     /// Get a reference to the control's output port
-    fn get_port_reference(&self) -> IoPort {
-        self.out_value.clone()
+    fn get_port_reference(&self, port_id: &str) -> Option<IoPort> {
+        match port_id {
+            "value" => Some(self.out_value.clone()),
+            _ => None,
+        }
     }
 
     /// Set the controls output value
-    fn set_value(&self, new_value: Option<SampleType>) {
-        if let Ok(mut value) = self.out_value.write() {
-            *value = new_value;
+    fn set_value(&self, port_id: &str, new_value: Option<SampleType>) {
+        match port_id {
+            "value" => {
+                if let Ok(mut value) = self.out_value.write() {
+                    *value = new_value;
+                }
+            },
+            _ => {},
         }
     }
 
@@ -48,14 +56,14 @@ impl Control for ControlKnob {
                     Some(val) => Some(val + 100f32),
                     None => Some(0f32),
                 };
-                self.set_value(next_value);
+                self.set_value("value", next_value);
             },
             'j' => {
                 let next_value = match *self.out_value.read().unwrap() {
                     Some(val) => Some(val - 100f32),
                     None => Some(1f32),
                 };
-                self.set_value(next_value);
+                self.set_value("value", next_value);
             },
             _ => (),
         }
