@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 use std::fmt;
+use std::error::Error;
 
 pub type SampleType = f32;
 pub const SAMPLE_RATE: u32 = 44100;
@@ -11,6 +12,8 @@ pub type PortResult<T> = std::result::Result<T, PortNotFoundError>;
 #[derive(Debug, Clone)]
 pub struct ModuleNotFoundError;
 
+impl Error for ModuleNotFoundError {}
+
 impl fmt::Display for ModuleNotFoundError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Module doesn't exist")
@@ -19,6 +22,8 @@ impl fmt::Display for ModuleNotFoundError {
 
 #[derive(Debug, Clone)]
 pub struct PortNotFoundError;
+
+impl Error for PortNotFoundError { }
 
 impl fmt::Display for PortNotFoundError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

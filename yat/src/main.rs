@@ -5,6 +5,7 @@ use std::thread;
 use cpal::{Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
+use crossterm::event::KeyEventKind;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -139,7 +140,18 @@ impl App {
                         },
                         InputMode::Control => match key.code {
                             KeyCode::Char(char) => {
-                                c_rack_ref.lock().unwrap().send_control_key(char);
+                                match key.kind {
+                                    KeyEventKind::Press => {
+                                        c_rack_ref.lock().unwrap().send_control_key(' ');
+                                        c_rack_ref.lock().unwrap().send_control_key(char);
+                                    },
+                                    KeyEventKind::Repeat => {
+                                        c_rack_ref.lock().unwrap().send_control_key(char);
+                                    },
+                                    KeyEventKind::Release => {
+                                        c_rack_ref.lock().unwrap().send_control_key(' ');
+                                    },
+                                }
                             }
                             KeyCode::Esc => {
                                 self.input_mode = InputMode::Normal;
@@ -169,7 +181,10 @@ impl App {
                                     } else {
                                         let module_type = split_command.nth(1).unwrap();
                                         let module_id = split_command.nth(0).unwrap();
-                                        c_rack_ref.lock().unwrap().add_module_type(module_type, module_id);
+                                        match c_rack_ref.lock().unwrap().add_module_type(module_type, module_id) {
+                                            Ok(res) => self.messages.push(res),
+                                            Err(e) => self.messages.push(format!("Failed to add {} {}: {}", module_type, module_id, e)),
+                                        }
                                     }
                                 } else if self.commands.last().unwrap().starts_with("connect") {
                                     let mut split_command = self.commands.last().unwrap().split(" ");
@@ -185,27 +200,30 @@ impl App {
                                             in_port_id
                                         ) {
                                             Ok(_) => (),
-                                            Err(_) => self.messages.push("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into()),
+                                            Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
                                         }
-                                    } else if self.commands.last().unwrap().split(" ").count() == 4 {
-                                        // TODO: Add proper error handling
-                                        let ctrl_id = split_command.nth(1).unwrap();
-                                        let in_module_id = split_command.nth(0).unwrap();
-                                        let in_port_id = split_command.nth(0).unwrap();
-                                        c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
+                                    //} else if self.commands.last().unwrap().split(" ").count() == 4 {
+                                        //// TODO: Add proper error handling
+                                        //let ctrl_id = split_command.nth(1).unwrap();
+                                        //let in_module_id = split_command.nth(0).unwrap();
+                                        //let in_port_id = split_command.nth(0).unwrap();
+                                        //c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
                                     } else {
-                                        self.messages.push("usage: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
+                                        self.messages.push("usagee: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
                                     }
                                 } else if self.commands.last().unwrap().starts_with("set") {
                                     let mut split_command = self.commands.last().unwrap().split(" ");
-                                    if self.commands.last().unwrap().split(" ").count() != 3 {
-                                        self.messages.push("usage: set <ctrl_id> <value>\n".into());
+                                    if self.commands.last().unwrap().split(" ").count() != 4 {
+                                        self.messages.push("usage: set <ctrl_id> <port_id> <value>\n".into());
                                     } else {
                                         let ctrl_id = split_command.nth(1).unwrap();
                                         let value = split_command.nth(0).unwrap().parse().ok();
 
                                         // TODO: Add proper error handling
-                                        c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value);
+                                        match c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value) {
+                                            Ok(res) => self.messages.push(res),
+                                            Err(e) => self.messages.push(format!("Failed to update control: {}", e)),
+                                        }
                                     }
                                 } else if self.commands.last().unwrap().starts_with("focus") {
                                     let mut split_command = self.commands.last().unwrap().split(" ");
@@ -215,7 +233,10 @@ impl App {
                                     } else {
                                         let ctrl_id = split_command.nth(1).unwrap();
 
-                                        c_rack_ref.lock().unwrap().set_focus_control(ctrl_id);
+                                        match c_rack_ref.lock().unwrap().set_focus_control(ctrl_id) {
+                                            Ok(res) => self.messages.push(res),
+                                            Err(e) => self.messages.push(format!("Failed to focus control: {}", e)),
+                                        }
                                     }
                                 } else if self.commands.last().unwrap().starts_with("print") {
                                     if self.commands.last().unwrap().split(" ").count() == 2 {

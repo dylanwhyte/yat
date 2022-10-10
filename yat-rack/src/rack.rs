@@ -3,11 +3,13 @@ use std::sync::{Arc, RwLock, Mutex, Condvar};
 use std::sync::atomic::AtomicBool;
 
 use crate::clock::Clock;
+use crate::controls::basic_keyboard::BasicKeyboard;
+use crate::controls::button::Button;
 use crate::controls::control::Control;
 use crate::controls::control_knob::ControlKnob;
-use crate::cpal_config::CpalConfig;
+use crate::modules::adsr::Adsr;
 use crate::modules::io_module::IoModule;
-use crate::types::{ModuleResult, ModuleNotFoundError, SampleType};
+use crate::types::{ModuleResult, ModuleNotFoundError, SampleType, PortNotFoundError};
 use crate::modules::oscillator::Oscillator;
 
 /// A Rack encompasses a group of conntected modules
@@ -55,13 +57,7 @@ impl Rack {
             module_chain,
             clock,
             running,
-            cpal_config,
         }
-    }
-
-    /// Return the cpal config
-    pub fn get_cpal_config(&self) -> Arc<RwLock<CpalConfig>> {
-        self.cpal_config.clone()
     }
 
     /// Add a new module to the Rack
@@ -70,21 +66,33 @@ impl Rack {
         self.modules.insert(module_id, module);
     }
 
-    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) {
-        if module_type == "ctrl" {
-            let control_knob = Arc::new(Mutex::new(ControlKnob::new(module_id.into())));
-            self.controls.insert(module_id.into(),control_knob);
-            return;
+    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) -> ModuleResult<String> {
+        match module_type {
+            // Controls
+            "control" => {
+                let control_knob = Arc::new(Mutex::new(ControlKnob::new(module_id.into())));
+                self.controls.insert(module_id.into(),control_knob);
+            },
+            "button" => {
+                let button = Arc::new(Mutex::new(Button::new(module_id.into())));
+                self.controls.insert(module_id.into(), button);
+            },
+            "keyboard" => {
+                let keyboard = Arc::new(Mutex::new(BasicKeyboard::new(module_id.into())));
+                self.controls.insert(module_id.into(), keyboard);
+            }
+            "osc" => {
+                let oscillator = Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.read().unwrap().time.clone())));
+                self.modules.insert(module_id.into(), oscillator);
+            },
+            "adsr" => {
+                let adsr = Arc::new(Mutex::new(Adsr::new(module_id.into(), self.clock.clone())));
+                self.modules.insert(module_id.into(), adsr);
+            },
+            _ => return Err(ModuleNotFoundError),
         }
 
-        let module = match module_type {
-            "osc" => {
-                Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.time.clone())))
-            },
-            _ => { println!("module type '{}' does not exist", module_type); return; },
-        };
-
-        self.modules.insert(module_id.into(), module);
+        Ok(format!("Add {} with id {}", module_type, module_id))
     }
 
     /// Conect two modules via the given ports
@@ -94,9 +102,17 @@ impl Rack {
         out_port_id: &str,
         in_module_id: &str,
         in_port_id: &str,
-    ) -> std::result::Result<(), ModuleNotFoundError> {
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Check for presence of the key and remove the module from the hash map if it exists
         // This is the only way I see to have mutible references to two elements of the HashMap
+
+        // TODO: Ensure an ID is unique in both controls and modules
+        if self.controls.contains_key(out_module_id) {
+            match self.connect_ctrl(out_module_id, out_port_id, in_module_id, in_port_id) {
+                Ok(res) => return Ok(res),
+                Err(e) => return Err(e),
+            }
+        }
 
         let in_module = if self.modules.contains_key(in_module_id) {
             self.modules.remove(in_module_id).ok_or(ModuleNotFoundError)
@@ -107,23 +123,24 @@ impl Rack {
 
 
         let out_module = match self.modules.get_mut(out_module_id) {
-            Some(module) => Ok(module),
+            Some(module) => Ok::<_, ModuleNotFoundError>(module),
             None => {
                 // Add previously removed module back before failure
                 println!("Reinserting module after failure");
                 self.modules.insert(String::from(in_module_id), in_module);
                 println!("Module {} does not exist", out_module_id);
-                return Err(ModuleNotFoundError);
+                return Err(Box::new(ModuleNotFoundError));
             }
         }?;
 
         let port_id = { out_module.lock().unwrap().get_out_port_ref(out_port_id) };
+
         let out_port = match port_id {
             Some(out_port) => out_port,
             None => {
                 self.modules.insert(String::from(in_module_id), in_module);
                 println!("Module {} does not have a port {}", out_module_id, out_port_id);
-                return Err(ModuleNotFoundError);
+                return Err(Box::new(ModuleNotFoundError));
             },
         };
 
@@ -132,12 +149,12 @@ impl Rack {
         //       it's possible that extra handling will be required here
         let port_id = { in_module.lock().unwrap().get_in_port_ref(in_port_id) };
         if let Some(_) = port_id {
-            in_module.lock().unwrap().set_in_port(in_port_id, out_port.clone());
+            in_module.lock().unwrap().set_in_port(in_port_id, out_port.clone())?;
         } else {
             // Add previously removed module back before failure
             self.modules.insert(String::from(in_module_id.clone()), in_module);
             println!("Module {} does not have a port {}", in_module_id, in_port_id);
-            return Err(ModuleNotFoundError);
+            return Err(Box::new(ModuleNotFoundError));
         }
 
         let out_module_order = { out_module.lock().unwrap().get_module_order() };
@@ -198,7 +215,7 @@ impl Rack {
         // Add back previously removed module, with updated ports
         self.modules.insert(String::from(in_module_id), in_module);
 
-        Ok(())
+        Ok(format!("connected module {} -> {} to {} -> {}", out_module_id, out_port_id, in_module_id, in_port_id))
     }
 
 
@@ -206,22 +223,28 @@ impl Rack {
         // TODO
     }
 
-    pub fn connect_ctrl(&mut self, ctrl_id: &str, in_module_id: &str, in_port_id: &str) {
+    pub fn connect_ctrl(&mut self, ctrl_id: &str, ctrl_port_id: &str, in_module_id: &str, in_port_id: &str) -> Result<String, Box<dyn std::error::Error>> {
         // TODO: Add proper error handling
         let control = match self.controls.get(ctrl_id) {
             Some(control) => control,
-            None => return,
+            None => return Err(Box::new(ModuleNotFoundError)),
+        };
+
+        let ctrl_port = match control.lock().unwrap().get_port_reference(ctrl_port_id) {
+            Some(port) => port,
+            None => return Err(Box::new(PortNotFoundError)),
         };
 
         let in_module = self.modules.get(in_module_id);
 
         match in_module {
             Some(module) => {
-                module.lock().unwrap().set_in_port(in_port_id, control.lock().unwrap().get_port_reference());
+                module.lock().unwrap().set_in_port(in_port_id, ctrl_port)?;
             },
-            None => return,
+            None => return Err(Box::new(ModuleNotFoundError)),
         }
 
+        Ok(format!("connected control {} -> {} to module {} -> {}", ctrl_id, ctrl_port_id, in_module_id, in_port_id))
     }
 
     pub fn set_focus_control(&mut self, ctrl_id: &str) -> ModuleResult<String> {
@@ -240,9 +263,10 @@ impl Rack {
         }
     }
 
+    // TODO: remove function
     pub fn set_ctrl_value(&mut self, ctrl_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
         match self.controls.get(ctrl_id) {
-            Some(ctrl) => ctrl.lock().unwrap().set_value(value),
+            Some(ctrl) => ctrl.lock().unwrap().set_value("value", value),
             None => return Err(ModuleNotFoundError),
         }
 
