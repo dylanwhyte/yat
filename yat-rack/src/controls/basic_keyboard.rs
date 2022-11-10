@@ -128,19 +128,22 @@ impl Control for BasicKeyboard {
             // and released. Some random, unneeded character is a temporary
             // (terrible) solution for testing
             ' ' => {
-                let next_value = match *self.out_gate.read().unwrap() {
-                    // Toggle gate
-                    Some(current_val) => {
-                        if current_val > 0f32 {
-                            Some(0f32)
-                        } else {
-                            Some(1f32)
-                        }
-                    },
-                    None => None,
-                };
-                self.set_value("gate", next_value);
+                //let next_value = match *self.out_gate.read().unwrap() {
+                    //// Toggle gate
+                    //Some(current_val) => {
+                        //if current_val > 0f32 {
+                            //Some(0f32)
+                        //} else {
+                            //Some(1f32)
+                        //}
+                    //},
+                    //None => None,
+                //};
+                self.set_value("gate", Some(1f32));
             },
+            '*' => {
+                self.set_value("gate", Some(0f32));
+            }
             _ => {},
         }
     }

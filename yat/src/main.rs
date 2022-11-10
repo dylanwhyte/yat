@@ -7,9 +7,23 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 use crossterm::event::KeyEventKind;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{
+        self,
+        DisableMouseCapture,
+        EnableMouseCapture,
+        Event,
+        KeyCode,
+        KeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags,
+        PopKeyboardEnhancementFlags,
+    },
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode,
+        enable_raw_mode,
+        EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use std::{error::Error, io};
 use tui::{
@@ -28,10 +42,21 @@ use yat_rack::rack::Rack;
 use yat_rack::modules::audio_out::AudioOut;
 
 fn main() -> Result<(), io::Error> {
-	// setup terminal
+    // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+
+    // Report hold & release events
+    execute!(
+        stdout,
+        PushKeyboardEnhancementFlags(
+            KeyboardEnhancementFlags::REPORT_EVENT_TYPES |
+            KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES,
+            //KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES,
+        )
+    ).unwrap();
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -41,6 +66,8 @@ fn main() -> Result<(), io::Error> {
 
     // restore terminal
     disable_raw_mode()?;
+
+    execute!(io::stdout(), PopKeyboardEnhancementFlags).unwrap();
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
@@ -52,7 +79,7 @@ fn main() -> Result<(), io::Error> {
         println!("{:?}", err)
     }
 
-	Ok(())
+    Ok(())
 }
 
 enum InputMode {
@@ -69,8 +96,8 @@ pub struct App {
     input: String,
     /// Current input mode
     input_mode: InputMode,
-	/// Command history
-	commands: Vec<String>,
+    /// Command history
+    commands: Vec<String>,
     /// History of recorded messages
     messages: Vec<String>,
 }
@@ -81,7 +108,7 @@ impl Default for App {
             rack: Arc::new(Mutex::new(Rack::new())),
             input: String::new(),
             input_mode: InputMode::Normal,
-			commands: Vec::new(),
+            commands: Vec::new(),
             messages: Vec::new(),
         }
     }
@@ -134,150 +161,166 @@ impl App {
                                 self.messages.push("Quiting...\n".into());
                                 c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
                                 quit_tx.send(true).unwrap();
-                                return Ok(());
+                                return Ok::<(), io::Error>(());
                             },
                             _ => {}
                         },
-                        InputMode::Control => match key.code {
-                            KeyCode::Char(char) => {
-                                match key.kind {
-                                    KeyEventKind::Press => {
-                                        c_rack_ref.lock().unwrap().send_control_key(' ');
-                                        c_rack_ref.lock().unwrap().send_control_key(char);
+                        InputMode::Control => {
+                            match key.kind {
+                                KeyEventKind::Press => {
+                                    match key.code {
+                                        KeyCode::Char(key_code) => {
+                                            //{ press_messages.lock().unwrap().push("Press\n".into()); }
+                                            // Fills buffer
+                                            { c_rack_ref.lock().unwrap().send_control_key(key_code); }
+                                            { c_rack_ref.lock().unwrap().send_control_key(' '); }
+                                        },
+                                        KeyCode::Esc => {
+                                            self.input_mode = InputMode::Normal;
+                                            //*exit_control_clone.lock().unwrap().get_mut() = true;
+                                        },
+                                        _ => {}
+                                    }
+                                },
+                                KeyEventKind::Repeat => {
+                                },
+                                KeyEventKind::Release => {
+                                    { c_rack_ref.lock().unwrap().send_control_key('*'); }
+                                },
+                            }
+                        },
+
+                        InputMode::Editing => match key.kind {
+                            KeyEventKind::Repeat => {},
+                            KeyEventKind::Release => {},
+                            KeyEventKind::Press => {
+                                match key.code {
+                                    KeyCode::Enter => {
+                                        self.commands.push(self.input.drain(..).collect());
+
+                                        if self.commands.last().unwrap() == "clear messages" {
+                                            self.messages.clear();
+                                        } else if self.commands.last().unwrap() == "quit" {
+                                            self.messages.push("Quiting...\n".into());
+                                            c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
+                                            quit_tx.send(true).unwrap();
+                                            return Ok(());
+                                        } else if self.commands.last().unwrap() == "stop" {
+                                            self.messages.push("stopping...\n".into());
+                                            c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
+                                        } else if self.commands.last().unwrap() == "run" {
+                                            self.messages.push("running...\n".into());
+                                            c_scope.spawn(|| { c_rack_ref.lock().unwrap().run() });
+                                        } else if self.commands.last().unwrap().starts_with("add") {
+                                            let mut split_command = self.commands.last().unwrap().split(" ");
+                                            if self.commands.last().unwrap().split(" ").count() != 3 {
+                                                self.messages.push("usage: add <module_type> <module_id>\n".into());
+                                            } else {
+                                                let module_type = split_command.nth(1).unwrap();
+                                                let module_id = split_command.nth(0).unwrap();
+                                                match c_rack_ref.lock().unwrap().add_module_type(module_type, module_id) {
+                                                    Ok(res) => self.messages.push(res),
+                                                    Err(e) => self.messages.push(format!("Failed to add {} {}: {}", module_type, module_id, e)),
+                                                }
+                                            }
+                                        } else if self.commands.last().unwrap().starts_with("connect") {
+                                            let mut split_command = self.commands.last().unwrap().split(" ");
+                                            if self.commands.last().unwrap().split(" ").count() == 5 {
+                                                let out_module_id = split_command.nth(1).unwrap();
+                                                let out_port_id = split_command.nth(0).unwrap();
+                                                let in_module_id = split_command.nth(0).unwrap();
+                                                let in_port_id = split_command.nth(0).unwrap();
+                                                match c_rack_ref.lock().unwrap().connect_modules(
+                                                    out_module_id,
+                                                    out_port_id,
+                                                    in_module_id,
+                                                    in_port_id
+                                                ) {
+                                                    Ok(_) => (),
+                                                    Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
+                                                }
+                                                //} else if self.commands.last().unwrap().split(" ").count() == 4 {
+                                                //// TODO: Add proper error handling
+                                                //let ctrl_id = split_command.nth(1).unwrap();
+                                                //let in_module_id = split_command.nth(0).unwrap();
+                                                //let in_port_id = split_command.nth(0).unwrap();
+                                                //c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
+                                        } else {
+                                            self.messages.push("usagee: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
+                                                }
+                                        } else if self.commands.last().unwrap().starts_with("set") {
+                                            let mut split_command = self.commands.last().unwrap().split(" ");
+                                            if self.commands.last().unwrap().split(" ").count() != 4 {
+                                                self.messages.push("usage: set <ctrl_id> <port_id> <value>\n".into());
+                                            } else {
+                                                let ctrl_id = split_command.nth(1).unwrap();
+                                                let value = split_command.nth(0).unwrap().parse().ok();
+
+                                                // TODO: Add proper error handling
+                                                match c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value) {
+                                                    Ok(res) => self.messages.push(res),
+                                                    Err(e) => self.messages.push(format!("Failed to update control: {}", e)),
+                                                }
+                                            }
+                                        } else if self.commands.last().unwrap().starts_with("focus") {
+                                            let mut split_command = self.commands.last().unwrap().split(" ");
+
+                                            if self.commands.last().unwrap().split(" ").count() != 2 {
+                                                self.messages.push("usage: focus <ctrl_id>\n".into());
+                                            } else {
+                                                let ctrl_id = split_command.nth(1).unwrap();
+
+                                                match c_rack_ref.lock().unwrap().set_focus_control(ctrl_id) {
+                                                    Ok(res) => self.messages.push(res),
+                                                    Err(e) => self.messages.push(format!("Failed to focus control: {}", e)),
+                                                }
+                                            }
+                                        } else if self.commands.last().unwrap().starts_with("print") {
+                                            if self.commands.last().unwrap().split(" ").count() == 2 {
+                                                match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
+                                                    "modules" => self.messages.push(c_rack_ref.lock().unwrap().print_modules()),
+                                                    "module-order" => self.messages.push(c_rack_ref.lock().unwrap().print_module_order()),
+                                                    "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(None)),
+                                                    _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
+                                                }
+                                            } else if self.commands.last().unwrap().split(" ").count() == 3 {
+                                                match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
+                                                    "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(
+                                                            Some(self.commands.last().unwrap().split(" ").nth(2).unwrap()))),
+                                                    _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
+                                                }
+                                            } else {
+                                                self.messages.push("usage: print <modules|module-order|ports [module_id]>\n".into());
+                                            }
+                                        } else {
+                                            let mut message = "".to_string();
+                                            message.push_str("Unknown command: ".into());
+                                            message.push_str(self.commands.last().unwrap());
+                                            message.push_str("\n");
+                                            self.messages.push(message);
+                                        }
                                     },
-                                    KeyEventKind::Repeat => {
-                                        c_rack_ref.lock().unwrap().send_control_key(char);
+                                    KeyCode::Char(c) => {
+                                        self.input.push(c);
                                     },
-                                    KeyEventKind::Release => {
-                                        c_rack_ref.lock().unwrap().send_control_key(' ');
+                                    KeyCode::Backspace => {
+                                        self.input.pop();
                                     },
+                                    KeyCode::Esc => {
+                                        self.input_mode = InputMode::Normal;
+                                    },
+                                    _ => {}
                                 }
                             }
-                            KeyCode::Esc => {
-                                self.input_mode = InputMode::Normal;
-                            },
-                            _ => {}
                         }
-                        InputMode::Editing => match key.code {
-                            KeyCode::Enter => {
-
-                                self.commands.push(self.input.drain(..).collect());
-
-                                if self.commands.last().unwrap() == "quit" {
-                                    self.messages.push("Quiting...\n".into());
-                                    c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
-                                    quit_tx.send(true).unwrap();
-                                    return Ok(());
-                                } else if self.commands.last().unwrap() == "stop" {
-                                    self.messages.push("stopping...\n".into());
-                                    c_scope.spawn(|| { c_rack_ref.lock().unwrap().stop() });
-                                } else if self.commands.last().unwrap() == "run" {
-                                    self.messages.push("running...\n".into());
-                                    c_scope.spawn(|| { c_rack_ref.lock().unwrap().run() });
-                                } else if self.commands.last().unwrap().starts_with("add") {
-                                    let mut split_command = self.commands.last().unwrap().split(" ");
-                                    if self.commands.last().unwrap().split(" ").count() != 3 {
-                                        self.messages.push("usage: add <module_type> <module_id>\n".into());
-                                    } else {
-                                        let module_type = split_command.nth(1).unwrap();
-                                        let module_id = split_command.nth(0).unwrap();
-                                        match c_rack_ref.lock().unwrap().add_module_type(module_type, module_id) {
-                                            Ok(res) => self.messages.push(res),
-                                            Err(e) => self.messages.push(format!("Failed to add {} {}: {}", module_type, module_id, e)),
-                                        }
-                                    }
-                                } else if self.commands.last().unwrap().starts_with("connect") {
-                                    let mut split_command = self.commands.last().unwrap().split(" ");
-                                    if self.commands.last().unwrap().split(" ").count() == 5 {
-                                        let out_module_id = split_command.nth(1).unwrap();
-                                        let out_port_id = split_command.nth(0).unwrap();
-                                        let in_module_id = split_command.nth(0).unwrap();
-                                        let in_port_id = split_command.nth(0).unwrap();
-                                        match c_rack_ref.lock().unwrap().connect_modules(
-                                            out_module_id,
-                                            out_port_id,
-                                            in_module_id,
-                                            in_port_id
-                                        ) {
-                                            Ok(_) => (),
-                                            Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
-                                        }
-                                    //} else if self.commands.last().unwrap().split(" ").count() == 4 {
-                                        //// TODO: Add proper error handling
-                                        //let ctrl_id = split_command.nth(1).unwrap();
-                                        //let in_module_id = split_command.nth(0).unwrap();
-                                        //let in_port_id = split_command.nth(0).unwrap();
-                                        //c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
-                                    } else {
-                                        self.messages.push("usagee: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
-                                    }
-                                } else if self.commands.last().unwrap().starts_with("set") {
-                                    let mut split_command = self.commands.last().unwrap().split(" ");
-                                    if self.commands.last().unwrap().split(" ").count() != 4 {
-                                        self.messages.push("usage: set <ctrl_id> <port_id> <value>\n".into());
-                                    } else {
-                                        let ctrl_id = split_command.nth(1).unwrap();
-                                        let value = split_command.nth(0).unwrap().parse().ok();
-
-                                        // TODO: Add proper error handling
-                                        match c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value) {
-                                            Ok(res) => self.messages.push(res),
-                                            Err(e) => self.messages.push(format!("Failed to update control: {}", e)),
-                                        }
-                                    }
-                                } else if self.commands.last().unwrap().starts_with("focus") {
-                                    let mut split_command = self.commands.last().unwrap().split(" ");
-
-                                    if self.commands.last().unwrap().split(" ").count() != 2 {
-                                        self.messages.push("usage: focus <ctrl_id>\n".into());
-                                    } else {
-                                        let ctrl_id = split_command.nth(1).unwrap();
-
-                                        match c_rack_ref.lock().unwrap().set_focus_control(ctrl_id) {
-                                            Ok(res) => self.messages.push(res),
-                                            Err(e) => self.messages.push(format!("Failed to focus control: {}", e)),
-                                        }
-                                    }
-                                } else if self.commands.last().unwrap().starts_with("print") {
-                                    if self.commands.last().unwrap().split(" ").count() == 2 {
-                                        match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
-                                            "modules" => self.messages.push(c_rack_ref.lock().unwrap().print_modules()),
-                                            "module-order" => self.messages.push(c_rack_ref.lock().unwrap().print_module_order()),
-                                            "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(None)),
-                                            _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
-                                        }
-                                    } else if self.commands.last().unwrap().split(" ").count() == 3 {
-                                        match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
-                                            "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(
-                                                    Some(self.commands.last().unwrap().split(" ").nth(2).unwrap()))),
-                                            _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
-                                        }
-                                    } else {
-                                        self.messages.push("usage: print <modules|module-order|ports [module_id]>\n".into());
-                                    }
-                                } else {
-                                    let mut message = "".to_string();
-                                    message.push_str("Unknown command: ".into());
-                                    message.push_str(self.commands.last().unwrap());
-                                    message.push_str("\n");
-                                    self.messages.push(message);
-                                }
-                            }
-                            KeyCode::Char(c) => {
-                                self.input.push(c);
-                            }
-                            KeyCode::Backspace => {
-                                self.input.pop();
-                            }
-                            KeyCode::Esc => {
-                                self.input_mode = InputMode::Normal;
-                            }
-                            _ => {}
-                        },
                     }
                 }
+
             }
-        })
+        })?;
+
+
+        Ok(())
     }
 
     fn ui<B: Backend>(&self, f: &mut Frame<B>) {
