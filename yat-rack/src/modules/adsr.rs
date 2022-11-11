@@ -32,16 +32,16 @@ pub struct Adsr {
     /// active
     in_trigger: IoPort,
 
-    /// The time (millis) until the signal's full amplitude is reached
+    /// The time (seconds) until the signal's full amplitude is reached
     in_attack: IoPort,
 
-    /// The time (millis) until the signal decays to the sustain amplitude
+    /// The time (seconds) until the signal decays to the sustain amplitude
     in_decay: IoPort,
 
-    /// The amplitude to remain at, while a not is held
+    /// The percentage amplitude to remain at, while a not is held
     in_sustain: IoPort,
 
-    /// The time (millis) for the amplitude to fully decay after a
+    /// The time (seconds) for the amplitude to fully decay after a
     /// note is released
     in_release: IoPort,
 
