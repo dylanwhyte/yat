@@ -1,5 +1,5 @@
 use hashbrown::HashMap;
-use std::sync::{Arc, RwLock, Mutex, Condvar};
+use std::sync::{Arc, RwLock, Mutex};
 use std::sync::atomic::AtomicBool;
 
 use crate::clock::Clock;
