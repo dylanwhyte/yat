@@ -236,7 +236,7 @@ impl App {
                                                     in_module_id,
                                                     in_port_id
                                                 ) {
-                                                    Ok(_) => (),
+                                                    Ok(message) => self.messages.push(message),
                                                     Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
                                                 }
                                                 //} else if self.commands.last().unwrap().split(" ").count() == 4 {
@@ -254,10 +254,13 @@ impl App {
                                                 self.messages.push("usage: set <ctrl_id> <port_id> <value>\n".into());
                                             } else {
                                                 let ctrl_id = split_command.nth(1).unwrap();
+                                                let port_id = split_command.nth(0).unwrap();
+
+                                                // TODO: Add proper error handling
                                                 let value = split_command.nth(0).unwrap().parse().ok();
 
                                                 // TODO: Add proper error handling
-                                                match c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, value) {
+                                                match c_rack_ref.lock().unwrap().set_ctrl_value(ctrl_id, port_id, value) {
                                                     Ok(res) => self.messages.push(res),
                                                     Err(e) => self.messages.push(format!("Failed to update control: {}", e)),
                                                 }

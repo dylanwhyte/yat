@@ -229,14 +229,14 @@ impl Rack {
 
         let in_module = self.modules.get(in_module_id);
 
-        match in_module {
+        let message = match in_module {
             Some(module) => {
-                module.lock().unwrap().set_in_port(in_port_id, ctrl_port)?;
+                module.lock().unwrap().set_in_port(in_port_id, ctrl_port)?
             },
             None => return Err(Box::new(ModuleNotFoundError)),
-        }
+        };
 
-        Ok(format!("connected control {} -> {} to module {} -> {}", ctrl_id, ctrl_port_id, in_module_id, in_port_id))
+        Ok(format!("connected control {} -> {} to module {} -> {}. {}", ctrl_id, ctrl_port_id, in_module_id, in_port_id, message))
     }
 
     pub fn set_focus_control(&mut self, ctrl_id: &str) -> ModuleResult<String> {
@@ -255,10 +255,9 @@ impl Rack {
         }
     }
 
-    // TODO: remove function
-    pub fn set_ctrl_value(&mut self, ctrl_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
+    pub fn set_ctrl_value(&mut self, ctrl_id: &str, port_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
         match self.controls.get(ctrl_id) {
-            Some(ctrl) => ctrl.lock().unwrap().set_value("value", value),
+            Some(ctrl) => ctrl.lock().unwrap().set_value(port_id, value),
             None => return Err(ModuleNotFoundError),
         }
 
