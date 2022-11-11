@@ -110,10 +110,10 @@ impl PartialEq for Adsr {
 impl IoModule for Adsr {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let trigger_active = self.in_trigger.read().unwrap().unwrap_or(0f32);
+        let trigger_active = self.in_trigger.read().unwrap().unwrap_or(0f32) != 0f32;
 
         // no key is active
-        if (self.adsr_state != AdsrState::Release) && (trigger_active == 0f32) {
+        if (self.adsr_state != AdsrState::Release) && (!trigger_active) {
             self.adsr_state = AdsrState::Inactive;
 
             if let Ok(mut value) = self.out_audio_out.write() {
@@ -129,7 +129,7 @@ impl IoModule for Adsr {
             // TODO: this may be entirely wrong
             match self.adsr_state {
                 AdsrState::Inactive => {
-                    if self.in_trigger.read().unwrap().unwrap_or(0f32) != 0f32 {
+                    if trigger_active {
                         self.trigger_time = clock.get_current_time().unwrap();
                         self.adsr_state = AdsrState::Attack;
                     }
@@ -137,59 +137,51 @@ impl IoModule for Adsr {
                 AdsrState::Attack => {
                     // Transition to max amplitude, and change state to decay after time
                     // If released, go straight to that
-                    if self.in_trigger.read().unwrap().unwrap_or(0f32) == 0f32 {
+                    let attack = self.in_attack.read().unwrap().unwrap_or(3.0f32);
+                    if !trigger_active {
                         self.adsr_state = AdsrState::Release;
-                    } else if self.active_time >= self.in_attack.read().unwrap().unwrap_or(0f32) {
+                    } else if self.active_time >= attack {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Decay;
                     } else {
                         // gradually increase amplitude, avoiding potential zero division
-                        if self.active_time != 0f32 {
-                            audio_out = audio_in * (self.active_time / self.in_attack.read().unwrap().unwrap_or(0f32));
-                        } else {
-                            audio_out = 0f32;
-                        }
+                        audio_out = audio_in * (self.active_time / attack);
                     }
                 },
                 AdsrState::Decay => {
                     // Transition to sustain amplitude
-                    if self.in_trigger.read().unwrap().unwrap_or(0f32) == 0f32 {
+                    let decay = self.in_decay.read().unwrap().unwrap_or(0.01f32);
+                    if !trigger_active {
                         self.adsr_state = AdsrState::Release;
-                    } else if self.active_time >= self.in_decay.read().unwrap().unwrap_or(0f32) {
+                    } else if self.active_time >= decay {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Sustain;
                     } else {
-                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0f32);
+                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
 
-                        // TODO: this particularly feels wrong
-                        audio_out = audio_in * (1f32 - (sustain_amp + (
-                                self.active_time /
-                                self.in_decay.read().unwrap().unwrap_or(0f32)
-                        )));
+                        audio_out = (audio_in * sustain_amp) * (1f32 - (self.active_time / decay));
                     }
                 },
                 AdsrState::Sustain => {
                     // Output at sustain level while trigger is active
-                    if self.in_trigger.read().unwrap().unwrap_or(0f32) == 0f32 {
+                    if !trigger_active {
+                        self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
                     } else {
-                        audio_out = audio_in * self.in_sustain.read().unwrap().unwrap_or(0f32);
+                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
+                        audio_out = audio_in * sustain_amp;
                     }
                 },
                 AdsrState::Release => {
+                    let release = self.in_release.read().unwrap().unwrap_or(0.01f32);
                     // Decay to zero
-                    if self.active_time >= self.in_decay.read().unwrap().unwrap_or(0f32) {
+                    if self.active_time >= release {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Inactive;
                     } else {
-                        let sustain_amp = audio_in
-                            * self.in_sustain.read().unwrap().unwrap_or(0f32);
+                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
 
-                        // TODO: This is also wrong
-                        audio_out = (audio_in * sustain_amp) * (1f32 - (
-                                    self.active_time /
-                                    self.in_decay.read().unwrap().unwrap_or(0f32)
-                        ));
+                        audio_out = (audio_in * sustain_amp) * (1f32 - (self.active_time / release));
                     }
                 },
             }
