@@ -40,7 +40,7 @@ impl Rack {
         let focussed_control = None;
         let module_chain = HashMap::new();
         let clock = Arc::new(RwLock::new(Clock::new()));
-        let running = AtomicBool::new(false);
+        let running = AtomicBool::new(true);
 
         Self {
             modules,
