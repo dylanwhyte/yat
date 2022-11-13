@@ -123,14 +123,18 @@ impl IoModule for Adsr {
             // FIXME: Add time to module
             let clock = self.clock.read().unwrap();
 
-            let mut audio_out = 0f32;
             let audio_in = self.in_audio.read().unwrap().unwrap_or(0f32);
+            let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
+
+            // This makes sense as a default value, in case attack and decay are zero
+            let mut audio_out = audio_in * sustain_amp;
 
             // TODO: this may be entirely wrong
             match self.adsr_state {
                 AdsrState::Inactive => {
                     if trigger_active {
                         self.trigger_time = clock.get_current_time().unwrap();
+                        self.active_time = 0f32;
                         self.adsr_state = AdsrState::Attack;
                     }
                 },
@@ -139,6 +143,7 @@ impl IoModule for Adsr {
                     // If released, go straight to that
                     let attack = self.in_attack.read().unwrap().unwrap_or(3.0f32);
                     if !trigger_active {
+                        self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= attack {
                         self.active_time = 0f32;
@@ -152,6 +157,7 @@ impl IoModule for Adsr {
                     // Transition to sustain amplitude
                     let decay = self.in_decay.read().unwrap().unwrap_or(0.01f32);
                     if !trigger_active {
+                        self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= decay {
                         self.active_time = 0f32;
@@ -159,7 +165,7 @@ impl IoModule for Adsr {
                     } else {
                         let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
 
-                        audio_out = (audio_in * sustain_amp) * (1f32 - (self.active_time / decay));
+                        audio_out = audio_in * (sustain_amp + (1f32 - (self.active_time / decay)));
                     }
                 },
                 AdsrState::Sustain => {
@@ -168,7 +174,6 @@ impl IoModule for Adsr {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
                     } else {
-                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
                         audio_out = audio_in * sustain_amp;
                     }
                 },
@@ -179,13 +184,14 @@ impl IoModule for Adsr {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Inactive;
                     } else {
-                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
-
-                        audio_out = (audio_in * sustain_amp) * (1f32 - (self.active_time / release));
+                        audio_out = audio_in * (sustain_amp - (self.active_time / release));
                     }
                 },
             }
 
+            // Note: while it's technically incorrect to increment here, as it occurs between state transitions,
+            // it prevents a bunch of checks for zero division and only increase the active time by an
+            // insignificant value
             self.active_time += clock.time_delta;
 
             if let Ok(mut value) = self.out_audio_out.write() {
