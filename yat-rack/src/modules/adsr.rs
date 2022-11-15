@@ -191,7 +191,7 @@ impl IoModule for Adsr {
             }
 
             // Note: while it's technically incorrect to increment here, as it occurs between state transitions,
-            // it prevents a bunch of checks for zero division and only increase the active time by an
+            // it prevents a bunch of handling of zero division and only increase the active time by an
             // insignificant value
             self.active_time += clock.time_delta;
 
