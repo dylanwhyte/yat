@@ -113,9 +113,7 @@ impl IoModule for Adsr {
         let trigger_active = self.in_trigger.read().unwrap().unwrap_or(0f32) != 0f32;
 
         // no key is active
-        if (self.adsr_state != AdsrState::Release) && (!trigger_active) {
-            self.adsr_state = AdsrState::Inactive;
-
+        if (self.adsr_state == AdsrState::Inactive) && (!trigger_active) {
             if let Ok(mut value) = self.out_audio_out.write() {
                 *value = Some(0f32);
             }
