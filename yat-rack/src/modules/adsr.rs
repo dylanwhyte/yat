@@ -139,7 +139,8 @@ impl IoModule for Adsr {
                 AdsrState::Attack => {
                     // Transition to max amplitude, and change state to decay after time
                     // If released, go straight to that
-                    let attack = self.in_attack.read().unwrap().unwrap_or(3.0f32);
+                    // Effectively set to zero, but avoiding potential zero division
+                    let attack = self.in_attack.read().unwrap().unwrap_or(clock.time_delta);
                     if !trigger_active {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
@@ -147,13 +148,14 @@ impl IoModule for Adsr {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Decay;
                     } else {
-                        // gradually increase amplitude, avoiding potential zero division
+                        // Gradually increase amplitude to max
                         audio_out = audio_in * (self.active_time / attack);
                     }
                 },
                 AdsrState::Decay => {
                     // Transition to sustain amplitude
-                    let decay = self.in_decay.read().unwrap().unwrap_or(0.01f32);
+                    // Effectively set to zero, but avoiding potential zero division
+                    let decay = self.in_decay.read().unwrap().unwrap_or(clock.time_delta);
                     if !trigger_active {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
@@ -176,7 +178,8 @@ impl IoModule for Adsr {
                     }
                 },
                 AdsrState::Release => {
-                    let release = self.in_release.read().unwrap().unwrap_or(0.01f32);
+                    // Effectively set to zero, but avoiding potential zero division
+                    let release = self.in_release.read().unwrap().unwrap_or(clock.time_delta);
                     // Decay to zero
                     if self.active_time >= release {
                         self.active_time = 0f32;
