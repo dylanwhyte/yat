@@ -165,7 +165,8 @@ impl IoModule for Adsr {
                     } else {
                         let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
 
-                        audio_out = audio_in * (sustain_amp + (1f32 - (self.active_time / decay)));
+                        // Decay to sustain amplitude
+                        audio_out = audio_in * (1f32 - ((self.active_time * (1f32 - sustain_amp)) / decay));
                     }
                 },
                 AdsrState::Sustain => {
@@ -185,7 +186,7 @@ impl IoModule for Adsr {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Inactive;
                     } else {
-                        audio_out = audio_in * (sustain_amp - (self.active_time / release));
+                        audio_out = audio_in * ((1f32 - (self.active_time / release)) * sustain_amp);
                     }
                 },
             }
