@@ -55,14 +55,13 @@ impl PartialEq for Adder {
 impl IoModule for Adder {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let a = self.in_a.read().unwrap().unwrap_or(0f32);
-        let b = self.in_b.read().unwrap().unwrap_or(0f32);
+        let a = self.in_a.read().expect("RwLock is poisoned").unwrap_or(0f32);
+        let b = self.in_b.read().expect("RwLock is poisoned").unwrap_or(0f32);
 
         let result = a + b;
 
-        if let Ok(mut value) = self.out_result.write() {
-            *value = Some(result);
-        }
+        let mut value = self.out_result.write().expect("RwLock is poisoned");
+        *value = Some(result);
     }
 
     /// Return a module's ID

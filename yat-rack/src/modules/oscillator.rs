@@ -62,18 +62,17 @@ impl IoModule for Oscillator {
         let pi: SampleType = 3.14159265359;
 
         // FIXME: Add time to module
-        let time = *self.time.read().unwrap();
+        let time = *self.time.read().expect("RwLock is poisoned");
 
 
-        let amp = self.in_amp.read().unwrap().unwrap_or(0.5);
+        let amp = self.in_amp.read().expect("RwLock is poisoned").unwrap_or(0.5);
 
-        let freq = self.in_freq.read().unwrap().unwrap_or(400.0);
+        let freq = self.in_freq.read().expect("RwLock is poisoned").unwrap_or(400.0);
 
         let audio_out = amp * (2.0 * pi * freq * time).sin();
 
-        if let Ok(mut value) = self.out_audio_out.write() {
-            *value = Some(audio_out);
-        }
+        let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
+        *value = Some(audio_out);
     }
 
     /// Return a module's ID

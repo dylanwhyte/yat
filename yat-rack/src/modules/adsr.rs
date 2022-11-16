@@ -110,19 +110,18 @@ impl PartialEq for Adsr {
 impl IoModule for Adsr {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let trigger_active = self.in_trigger.read().unwrap().unwrap_or(0f32) != 0f32;
+        let trigger_active = self.in_trigger.read().expect("RwLock is poisoned").unwrap_or(0f32) != 0f32;
 
         // no key is active
         if (self.adsr_state == AdsrState::Inactive) && (!trigger_active) {
-            if let Ok(mut value) = self.out_audio_out.write() {
-                *value = Some(0f32);
-            }
+            let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
+            *value = Some(0f32);
         } else {
             // FIXME: Add time to module
-            let clock = self.clock.read().unwrap();
+            let clock = self.clock.read().expect("RwLock is poisoned");
 
-            let audio_in = self.in_audio.read().unwrap().unwrap_or(0f32);
-            let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
+            let audio_in = self.in_audio.read().expect("RwLock is poisoned").unwrap_or(0f32);
+            let sustain_amp = self.in_sustain.read().expect("RwLock is poisoned").unwrap_or(0.5f32);
 
             // This makes sense as a default value, in case attack and decay are zero
             let mut audio_out = audio_in * sustain_amp;
@@ -140,7 +139,7 @@ impl IoModule for Adsr {
                     // Transition to max amplitude, and change state to decay after time
                     // If released, go straight to that
                     // Effectively set to zero, but avoiding potential zero division
-                    let attack = self.in_attack.read().unwrap().unwrap_or(clock.time_delta);
+                    let attack = self.in_attack.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
                     if !trigger_active {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
@@ -155,7 +154,7 @@ impl IoModule for Adsr {
                 AdsrState::Decay => {
                     // Transition to sustain amplitude
                     // Effectively set to zero, but avoiding potential zero division
-                    let decay = self.in_decay.read().unwrap().unwrap_or(clock.time_delta);
+                    let decay = self.in_decay.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
                     if !trigger_active {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Release;
@@ -163,7 +162,7 @@ impl IoModule for Adsr {
                         self.active_time = 0f32;
                         self.adsr_state = AdsrState::Sustain;
                     } else {
-                        let sustain_amp = self.in_sustain.read().unwrap().unwrap_or(0.5f32);
+                        let sustain_amp = self.in_sustain.read().expect("RwLock is poisoned").unwrap_or(0.5f32);
 
                         // Decay to sustain amplitude
                         audio_out = audio_in * (1f32 - ((self.active_time * (1f32 - sustain_amp)) / decay));
@@ -180,7 +179,7 @@ impl IoModule for Adsr {
                 },
                 AdsrState::Release => {
                     // Effectively set to zero, but avoiding potential zero division
-                    let release = self.in_release.read().unwrap().unwrap_or(clock.time_delta);
+                    let release = self.in_release.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
                     // Decay to zero
                     if self.active_time >= release {
                         self.active_time = 0f32;
@@ -196,9 +195,8 @@ impl IoModule for Adsr {
             // insignificant value
             self.active_time += clock.time_delta;
 
-            if let Ok(mut value) = self.out_audio_out.write() {
-                *value = Some(audio_out);
-            }
+            let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
+            *value = Some(audio_out);
         }
     }
 

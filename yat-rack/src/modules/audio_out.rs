@@ -55,7 +55,7 @@ impl PartialEq for AudioOut {
 
 impl IoModule for AudioOut {
     fn process_inputs(&mut self) {
-        let audio_in = *self.in_audio_in.read().unwrap();
+        let audio_in = *self.in_audio_in.read().expect("RwLock is poisoned");
 
         self.audio_tx.send(audio_in.unwrap()).unwrap();
     }

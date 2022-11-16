@@ -37,9 +37,8 @@ impl Control for ControlKnob {
     fn set_value(&self, port_id: &str, new_value: Option<SampleType>) {
         match port_id {
             "value" => {
-                if let Ok(mut value) = self.out_value.write() {
-                    *value = new_value;
-                }
+                let mut value = self.out_value.write().expect("RwLock is poisoned");
+                *value = new_value;
             },
             _ => {},
         }
@@ -52,14 +51,14 @@ impl Control for ControlKnob {
     fn recv_control_key(&self, key: char) {
         match key {
             'k' => {
-                let next_value = match *self.out_value.read().unwrap() {
+                let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
                     Some(val) => Some(val + 100f32),
                     None => Some(0f32),
                 };
                 self.set_value("value", next_value);
             },
             'j' => {
-                let next_value = match *self.out_value.read().unwrap() {
+                let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
                     Some(val) => Some(val - 100f32),
                     None => Some(1f32),
                 };

@@ -36,13 +36,13 @@ impl Control for Button {
     fn set_value(&self, port: &str, new_value: Option<SampleType>) {
         match port {
             "gate" => {
-                if let Ok(mut value) = self.out_gate.write() {
-                    if let Some(new_value) = new_value {
-                        if new_value > 0f32 {
-                            *value = Some(1f32);
-                        } else {
-                            *value = Some(0f32);
-                        }
+                let mut value = self.out_gate.write().expect("RwLock is poisoned");
+
+                if let Some(new_value) = new_value {
+                    if new_value > 0f32 {
+                        *value = Some(1f32);
+                    } else {
+                        *value = Some(0f32);
                     }
                 }
             },
@@ -57,7 +57,7 @@ impl Control for Button {
         match key {
             // Toggle between on and off, using space
             ' ' => {
-                let next_value = match *self.out_gate.read().unwrap() {
+                let next_value = match *self.out_gate.read().expect("RwLock has been poisoned") {
                     Some(current_val) => {
                         if current_val > 0f32 {
                             Some(0f32)

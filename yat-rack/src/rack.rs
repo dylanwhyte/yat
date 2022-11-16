@@ -54,7 +54,7 @@ impl Rack {
 
     /// Add a new module to the Rack
     pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModule + Send + Sync>>) {
-        let module_id = { module.lock().unwrap().get_id().clone() };
+        let module_id = { module.lock().expect("Mutex poisoned").get_id().clone() };
         self.modules.insert(module_id, module);
     }
 
@@ -74,7 +74,7 @@ impl Rack {
                 self.controls.insert(module_id.into(), keyboard);
             }
             "osc" => {
-                let oscillator = Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.read().unwrap().time.clone())));
+                let oscillator = Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.read().expect("RwLock is poisoned").time.clone())));
                 self.modules.insert(module_id.into(), oscillator);
             },
             "adsr" => {
@@ -125,7 +125,7 @@ impl Rack {
             }
         }?;
 
-        let port_id = { out_module.lock().unwrap().get_out_port_ref(out_port_id) };
+        let port_id = { out_module.lock().expect("Mutex lock is poisoned").get_out_port_ref(out_port_id) };
 
         let out_port = match port_id {
             Some(out_port) => out_port,
@@ -139,9 +139,9 @@ impl Rack {
         // Only connect to existing port, in order to avoid mistakes
         // Note: with this, older connections to the port are automatically disconnected
         //       it's possible that extra handling will be required here
-        let port_id = { in_module.lock().unwrap().get_in_port_ref(in_port_id) };
+        let port_id = { in_module.lock().expect("Mutex lock is poisoned").get_in_port_ref(in_port_id) };
         if let Some(_) = port_id {
-            in_module.lock().unwrap().set_in_port(in_port_id, out_port.clone())?;
+            in_module.lock().expect("Mutex lock is poisoned").set_in_port(in_port_id, out_port.clone())?;
         } else {
             // Add previously removed module back before failure
             self.modules.insert(String::from(in_module_id.clone()), in_module);
@@ -149,13 +149,13 @@ impl Rack {
             return Err(Box::new(ModuleNotFoundError));
         }
 
-        let out_module_order = { out_module.lock().unwrap().get_module_order() };
-        let in_module_order = { in_module.lock().unwrap().get_module_order() };
+        let out_module_order = { out_module.lock().expect("Mutex lock is poisoned").get_module_order() };
+        let in_module_order = { in_module.lock().expect("Mutex lock is poisoned").get_module_order() };
 
         match (out_module_order, in_module_order) {
             (None, None) => {
-                out_module.lock().unwrap().set_module_order(Some(1));
-                in_module.lock().unwrap().set_module_order(Some(2));
+                out_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(1));
+                in_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(2));
             },
             (None, Some(order)) => {
                 self.module_chain.get_mut(&order).unwrap()
@@ -163,11 +163,11 @@ impl Rack {
                         !Arc::ptr_eq(module, &in_module)
                     });
                 if order == 1 {
-                    out_module.lock().unwrap().set_module_order(Some(order));
-                    in_module.lock().unwrap().set_module_order(Some(order + 1));
+                    out_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order));
+                    in_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order + 1));
                 } else {
-                    out_module.lock().unwrap().set_module_order(Some(order - 1));
-                    in_module.lock().unwrap().set_module_order(Some(order));
+                    out_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order - 1));
+                    in_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order));
                 }
             },
             (Some(order), None) => {
@@ -175,7 +175,7 @@ impl Rack {
                     .retain(|module| {
                         !Arc::ptr_eq(module, &out_module)
                     });
-                in_module.lock().unwrap().set_module_order(Some(order + 1));
+                in_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order + 1));
             },
             (Some(_), Some(order)) => {
                 self.module_chain.get_mut(&out_module_order.unwrap()).unwrap()
@@ -186,19 +186,19 @@ impl Rack {
                     .retain(|module| {
                         !Arc::ptr_eq(module, &in_module)
                     });
-                in_module.lock().unwrap().set_module_order(Some(order + 1));
+                in_module.lock().expect("Mutex lock is poisoned").set_module_order(Some(order + 1));
             },
         }
 
         // Add entry to module position for this functions order
-        self.module_chain.entry(out_module.lock().unwrap().get_module_order().unwrap())
+        self.module_chain.entry(out_module.lock().expect("Mutex lock is poisoned").get_module_order().unwrap())
             // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
             //.insert(out_module.get_id().clone());
             .push(out_module.clone());
 
-        self.module_chain.entry(in_module.lock().unwrap().get_module_order().unwrap())
+        self.module_chain.entry(in_module.lock().expect("Mutex lock is poisoned").get_module_order().unwrap())
             // If there's no entry for the key, create a new Vec and return a mutable ref to it
             .or_default()
             // and insert the item onto the Vec
@@ -222,7 +222,7 @@ impl Rack {
             None => return Err(Box::new(ModuleNotFoundError)),
         };
 
-        let ctrl_port = match control.lock().unwrap().get_port_reference(ctrl_port_id) {
+        let ctrl_port = match control.lock().expect("Mutex lock is poisoned").get_port_reference(ctrl_port_id) {
             Some(port) => port,
             None => return Err(Box::new(PortNotFoundError)),
         };
@@ -231,7 +231,7 @@ impl Rack {
 
         let message = match in_module {
             Some(module) => {
-                module.lock().unwrap().set_in_port(in_port_id, ctrl_port)?
+                module.lock().expect("Mutex lock is poisoned").set_in_port(in_port_id, ctrl_port)?
             },
             None => return Err(Box::new(ModuleNotFoundError)),
         };
@@ -251,13 +251,13 @@ impl Rack {
 
     pub fn send_control_key(&self, key: char) {
         if let Some(control) = &self.focussed_control {
-            control.lock().unwrap().recv_control_key(key);
+            control.lock().expect("Mutex lock is poisoned").recv_control_key(key);
         }
     }
 
     pub fn set_ctrl_value(&mut self, ctrl_id: &str, port_id: &str, value: Option<SampleType>) -> ModuleResult<String> {
         match self.controls.get(ctrl_id) {
-            Some(ctrl) => ctrl.lock().unwrap().set_value(port_id, value),
+            Some(ctrl) => ctrl.lock().expect("Mutex lock is poisoned").set_value(port_id, value),
             None => return Err(ModuleNotFoundError),
         }
 
@@ -274,13 +274,13 @@ impl Rack {
 				output.push_str(":\n");
 
 				output.push_str("    inputs:\n");
-				for id in module.lock().unwrap().get_in_ports() {
+				for id in module.lock().expect("Mutex lock is poisoned").get_in_ports() {
 					output.push_str("        ");
 					output.push_str(id);
 					output.push_str("\n");
 				}
 				output.push_str("    outputs:\n");
-				for id in module.lock().unwrap().get_out_ports() {
+				for id in module.lock().expect("Mutex lock is poisoned").get_out_ports() {
 					output.push_str("        ");
 					output.push_str(id);
 					output.push_str("\n");
@@ -293,13 +293,13 @@ impl Rack {
 				output.push_str(":\n");
 
 				output.push_str("    inputs:\n");
-				for id in module.lock().unwrap().get_in_ports() {
+				for id in module.lock().expect("Mutex lock is poisoned").get_in_ports() {
 					output.push_str("        ");
 					output.push_str(id);
 					output.push_str("\n");
 				}
 				output.push_str("    outputs:\n");
-				for id in module.lock().unwrap().get_out_ports() {
+				for id in module.lock().expect("Mutex lock is poisoned").get_out_ports() {
 					output.push_str("        ");
 					output.push_str(id);
 					output.push_str("\n");
@@ -324,7 +324,7 @@ impl Rack {
             output.push_str(":\n");
             for module in modules {
                 output.push_str("        ");
-				output.push_str(module.lock().unwrap().get_id());
+				output.push_str(module.lock().expect("Mutex lock is poisoned").get_id());
                 output.push_str("\n");
             }
         }
@@ -363,12 +363,12 @@ impl Rack {
         // equal order should be able to process at the same time
         for position in 1..=order_max {
             for module in self.module_chain.get_mut(&position).unwrap() {
-                module.lock().unwrap().process_inputs();
+                module.lock().expect("Mutex lock is poisoned").process_inputs();
             }
         }
 
         // After each module has been processed update the time for the next round of processing
-        self.clock.read().unwrap().increment();
+        self.clock.read().expect("RwLock is poisoned").increment();
     }
 
     // Returns the highest value order in the module_chain hashmap

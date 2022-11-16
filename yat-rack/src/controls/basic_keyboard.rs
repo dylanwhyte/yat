@@ -43,14 +43,12 @@ impl Control for BasicKeyboard {
     fn set_value(&self, port: &str, new_value: Option<SampleType>) {
         match port {
             "gate" => {
-                if let Ok(mut value) = self.out_gate.write() {
-                    *value = new_value;
-                }
+                let mut value = self.out_gate.write().expect("RwLock is poisoned");
+                *value = new_value;
             },
             "pitch" => {
-                if let Ok(mut value) = self.out_pitch.write() {
-                    *value = new_value;
-                }
+                let mut value = self.out_pitch.write().expect("RwLock is poisoned");
+                *value = new_value;
             },
             _ => {},
         }
@@ -128,7 +126,7 @@ impl Control for BasicKeyboard {
             // and released. Some random, unneeded character is a temporary
             // (terrible) solution for testing
             ' ' => {
-                //let next_value = match *self.out_gate.read().unwrap() {
+                //let next_value = match *self.out_gate.read().expect("RwLock is poisoned") {
                     //// Toggle gate
                     //Some(current_val) => {
                         //if current_val > 0f32 {
