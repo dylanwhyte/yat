@@ -9,8 +9,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cpal = "0.13.4"
 hashbrown = "0.12.3"
-tui = "0.19.0"
-crossterm = "0.25.0"
-unicode-width = "0.1"
