@@ -59,11 +59,9 @@ impl PartialEq for Oscillator {
 impl IoModule for Oscillator {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let pi: SampleType = 3.14159265359;
+        let pi = std::f32::consts::PI;
 
-        // FIXME: Add time to module
         let time = *self.time.read().expect("RwLock is poisoned");
-
 
         let amp = self.in_amp.read().expect("RwLock is poisoned").unwrap_or(0.5);
 
