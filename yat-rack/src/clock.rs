@@ -50,8 +50,8 @@ impl Clock {
     }
 
     pub fn increment(&mut self) {
-        if self.time >= 1.0 {
-            self.time -= 1.0;
+        if self.time >= 100_000f64 {
+            self.time -= 100_000f64;
         } else {
             self.time += self.time_delta;
         }
