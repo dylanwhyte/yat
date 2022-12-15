@@ -34,29 +34,24 @@ impl Control for Button {
 
     /// Set the controls output value
     fn set_value(&self, port: &str, new_value: Option<SampleType>) {
-        match port {
-            "gate" => {
-                let mut value = self.out_gate.write().expect("RwLock is poisoned");
+        if port == "gate" {
+            let mut value = self.out_gate.write().expect("RwLock is poisoned");
 
-                if let Some(new_value) = new_value {
-                    if new_value > 0f64 {
-                        *value = Some(1f64);
-                    } else {
-                        *value = Some(0f64);
-                    }
+            if let Some(new_value) = new_value {
+                if new_value > 0f64 {
+                    *value = Some(1f64);
+                } else {
+                    *value = Some(0f64);
                 }
-            },
-            _ => {},
-
+            }
         }
    }
 
     /// Receive and handle a control keys.
     /// For a button, the spacebar toggles the button on and off
     fn recv_control_key(&self, key: char) {
-        match key {
+            if key == ' ' {
             // Toggle between on and off, using space
-            ' ' => {
                 let next_value = match *self.out_gate.read().expect("RwLock has been poisoned") {
                     Some(current_val) => {
                         if current_val > 0f64 {
@@ -68,11 +63,8 @@ impl Control for Button {
                     None => None,
                 };
                 self.set_value("gate", next_value);
-            },
-            _ => (),
         }
     }
-
 }
 
 impl PartialEq for Button {

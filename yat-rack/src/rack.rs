@@ -155,19 +155,16 @@ impl Rack {
                 .expect("Mutex lock is poisoned")
                 .get_in_port_ref(in_port_id)
         };
-        if let Some(_) = port_id {
+
+        if port_id.is_some() {
             in_module
                 .lock()
                 .expect("Mutex lock is poisoned")
-                .set_in_port(in_port_id, out_port.clone())?;
+                .set_in_port(in_port_id, out_port)?;
         } else {
             // Add previously removed module back before failure
             self.modules
-                .insert(String::from(in_module_id.clone()), in_module);
-            println!(
-                "Module {} does not have a port {}",
-                in_module_id, in_port_id
-            );
+                .insert(String::from(in_module_id), in_module);
             return Err(Box::new(ModuleNotFoundError));
         }
 
@@ -224,7 +221,7 @@ impl Rack {
                 self.module_chain
                     .get_mut(&order)
                     .unwrap()
-                    .retain(|module| !Arc::ptr_eq(module, &out_module));
+                    .retain(|module| !Arc::ptr_eq(module, out_module));
                 in_module
                     .lock()
                     .expect("Mutex lock is poisoned")
@@ -234,7 +231,7 @@ impl Rack {
                 self.module_chain
                     .get_mut(&out_module_order.unwrap())
                     .unwrap()
-                    .retain(|module| !Arc::ptr_eq(module, &out_module));
+                    .retain(|module| !Arc::ptr_eq(module, out_module));
                 self.module_chain
                     .get_mut(&order)
                     .unwrap()
@@ -378,7 +375,7 @@ impl Rack {
                 {
                     output.push_str("        ");
                     output.push_str(id);
-                    output.push_str("\n");
+                    output.push('\n');
                 }
                 output.push_str("    outputs:\n");
                 for id in module
@@ -388,7 +385,7 @@ impl Rack {
                 {
                     output.push_str("        ");
                     output.push_str(id);
-                    output.push_str("\n");
+                    output.push('\n');
                 }
             }
         } else {
@@ -405,7 +402,7 @@ impl Rack {
                 {
                     output.push_str("        ");
                     output.push_str(id);
-                    output.push_str("\n");
+                    output.push('\n');
                 }
                 output.push_str("    outputs:\n");
                 for id in module
@@ -415,12 +412,12 @@ impl Rack {
                 {
                     output.push_str("        ");
                     output.push_str(id);
-                    output.push_str("\n");
+                    output.push('\n');
                 }
             }
         }
 
-        output.push_str("\n");
+        output.push('\n');
         output
     }
 
@@ -438,11 +435,11 @@ impl Rack {
             for module in modules {
                 output.push_str("        ");
                 output.push_str(module.lock().expect("Mutex lock is poisoned").get_id());
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 
-        output.push_str("\n");
+        output.push('\n');
         output
     }
 
@@ -451,19 +448,19 @@ impl Rack {
         for module in self.modules.keys() {
             output.push_str("    ");
             output.push_str(module);
-            output.push_str("\n");
+            output.push('\n');
         }
 
-        output.push_str("\n");
+        output.push('\n');
 
         output.push_str("Controls:\n");
         for control in self.controls.keys() {
             output.push_str("    ");
             output.push_str(control);
-            output.push_str("\n");
+            output.push('\n');
         }
 
-        output.push_str("\n");
+        output.push('\n');
 
         output
     }
@@ -506,5 +503,11 @@ impl Rack {
 
     pub fn stop(&mut self) {
         *self.running.get_mut() = false;
+    }
+}
+
+impl Default for Rack {
+    fn default() -> Self {
+        Self::new()
     }
 }

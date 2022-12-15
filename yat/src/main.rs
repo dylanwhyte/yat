@@ -399,15 +399,15 @@ impl App {
                                             c_scope.spawn(|| c_rack_ref.lock().unwrap().run());
                                         } else if self.commands.last().unwrap().starts_with("add") {
                                             let mut split_command =
-                                                self.commands.last().unwrap().split(" ");
-                                            if self.commands.last().unwrap().split(" ").count() != 3
+                                                self.commands.last().unwrap().split(' ');
+                                            if self.commands.last().unwrap().split(' ').count() != 3
                                             {
                                                 self.messages.push(
                                                     "usage: add <module_type> <module_id>\n".into(),
                                                 );
                                             } else {
                                                 let module_type = split_command.nth(1).unwrap();
-                                                let module_id = split_command.nth(0).unwrap();
+                                                let module_id = split_command.next().unwrap();
                                                 match c_rack_ref
                                                     .lock()
                                                     .unwrap()
@@ -427,13 +427,13 @@ impl App {
                                             .starts_with("connect")
                                         {
                                             let mut split_command =
-                                                self.commands.last().unwrap().split(" ");
-                                            if self.commands.last().unwrap().split(" ").count() == 5
+                                                self.commands.last().unwrap().split(' ');
+                                            if self.commands.last().unwrap().split(' ').count() == 5
                                             {
                                                 let out_module_id = split_command.nth(1).unwrap();
-                                                let out_port_id = split_command.nth(0).unwrap();
-                                                let in_module_id = split_command.nth(0).unwrap();
-                                                let in_port_id = split_command.nth(0).unwrap();
+                                                let out_port_id = split_command.next().unwrap();
+                                                let in_module_id = split_command.next().unwrap();
+                                                let in_port_id = split_command.next().unwrap();
                                                 match c_rack_ref.lock().unwrap().connect_modules(
                                                     out_module_id,
                                                     out_port_id,
@@ -446,19 +446,19 @@ impl App {
                                                         e
                                                     )),
                                                 }
-                                                //} else if self.commands.last().unwrap().split(" ").count() == 4 {
+                                                //} else if self.commands.last().unwrap().split(' ').count() == 4 {
                                                 //// TODO: Add proper error handling
                                                 //let ctrl_id = split_command.nth(1).unwrap();
-                                                //let in_module_id = split_command.nth(0).unwrap();
-                                                //let in_port_id = split_command.nth(0).unwrap();
+                                                //let in_module_id = split_command.next().unwrap();
+                                                //let in_port_id = split_command.next().unwrap();
                                                 //c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
                                             } else {
                                                 self.messages.push("usagee: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
                                             }
                                         } else if self.commands.last().unwrap().starts_with("set") {
                                             let mut split_command =
-                                                self.commands.last().unwrap().split(" ");
-                                            if self.commands.last().unwrap().split(" ").count() != 4
+                                                self.commands.last().unwrap().split(' ');
+                                            if self.commands.last().unwrap().split(' ').count() != 4
                                             {
                                                 self.messages.push(
                                                     "usage: set <ctrl_id> <port_id> <value>\n"
@@ -466,11 +466,11 @@ impl App {
                                                 );
                                             } else {
                                                 let ctrl_id = split_command.nth(1).unwrap();
-                                                let port_id = split_command.nth(0).unwrap();
+                                                let port_id = split_command.next().unwrap();
 
                                                 // TODO: Add proper error handling
                                                 let value =
-                                                    split_command.nth(0).unwrap().parse().ok();
+                                                    split_command.next().unwrap().parse().ok();
 
                                                 // TODO: Add proper error handling
                                                 match c_rack_ref
@@ -488,9 +488,9 @@ impl App {
                                         } else if self.commands.last().unwrap().starts_with("focus")
                                         {
                                             let mut split_command =
-                                                self.commands.last().unwrap().split(" ");
+                                                self.commands.last().unwrap().split(' ');
 
-                                            if self.commands.last().unwrap().split(" ").count() != 2
+                                            if self.commands.last().unwrap().split(' ').count() != 2
                                             {
                                                 self.messages
                                                     .push("usage: focus <ctrl_id>\n".into());
@@ -511,9 +511,9 @@ impl App {
                                             }
                                         } else if self.commands.last().unwrap().starts_with("print")
                                         {
-                                            if self.commands.last().unwrap().split(" ").count() == 2
+                                            if self.commands.last().unwrap().split(' ').count() == 2
                                             {
-                                                match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
+                                                match self.commands.last().unwrap().split(' ').nth(1).unwrap() {
                                                     "modules" => self.messages.push(c_rack_ref.lock().unwrap().print_modules()),
                                                     "module-order" => self.messages.push(c_rack_ref.lock().unwrap().print_module_order()),
                                                     "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(None)),
@@ -523,13 +523,13 @@ impl App {
                                                 .commands
                                                 .last()
                                                 .unwrap()
-                                                .split(" ")
+                                                .split(' ')
                                                 .count()
                                                 == 3
                                             {
-                                                match self.commands.last().unwrap().split(" ").nth(1).unwrap() {
+                                                match self.commands.last().unwrap().split(' ').nth(1).unwrap() {
                                                     "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(
-                                                            Some(self.commands.last().unwrap().split(" ").nth(2).unwrap()))),
+                                                            Some(self.commands.last().unwrap().split(' ').nth(2).unwrap()))),
                                                     _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
                                                 }
                                             } else {
@@ -537,9 +537,9 @@ impl App {
                                             }
                                         } else {
                                             let mut message = "".to_string();
-                                            message.push_str("Unknown command: ".into());
+                                            message.push_str("Unknown command: ");
                                             message.push_str(self.commands.last().unwrap());
-                                            message.push_str("\n");
+                                            message.push('\n');
                                             self.messages.push(message);
                                         }
                                     }
@@ -708,11 +708,11 @@ impl App {
             let device = host.default_output_device().expect("no device available");
             let config = device.default_output_config().unwrap();
 
-            let _ = match config.sample_format() {
+            match config.sample_format() {
                 SampleFormat::F32 => App::run::<f32>(&device, &config.into(), audio_rx).unwrap(),
                 SampleFormat::I16 => App::run::<i16>(&device, &config.into(), audio_rx).unwrap(),
                 SampleFormat::U16 => App::run::<u16>(&device, &config.into(), audio_rx).unwrap(),
-            };
+            }
         });
     }
 

@@ -266,12 +266,12 @@ impl IoModule for Adsr {
     /// Set the value of a module's input port
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
-            "audio_in" => self.in_audio = out_port.clone(),
-            "trigger" => self.in_trigger = out_port.clone(),
-            "attack" => self.in_attack = out_port.clone(),
-            "decay" => self.in_decay = out_port.clone(),
-            "sustain" => self.in_sustain = out_port.clone(),
-            "release" => self.in_release = out_port.clone(),
+            "audio_in" => self.in_audio = out_port,
+            "trigger" => self.in_trigger = out_port,
+            "attack" => self.in_attack = out_port,
+            "decay" => self.in_decay = out_port,
+            "sustain" => self.in_sustain = out_port,
+            "release" => self.in_release = out_port,
             _ => return Err(PortNotFoundError),
         }
 

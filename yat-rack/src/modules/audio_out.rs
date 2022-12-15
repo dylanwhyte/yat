@@ -92,7 +92,7 @@ impl IoModule for AudioOut {
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
             "audio_in" => {
-                self.in_audio_in = out_port.clone();
+                self.in_audio_in = out_port;
             }
             _ => { return  Err(PortNotFoundError); },
         }

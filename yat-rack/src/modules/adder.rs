@@ -96,8 +96,8 @@ impl IoModule for Adder {
     /// Set the value of a module's input port
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
         match port_id {
-            "a" => self.in_a = out_port.clone(),
-            "b" => self.in_b = out_port.clone(),
+            "a" => self.in_a = out_port,
+            "b" => self.in_b = out_port,
             _ => { return Err(PortNotFoundError) },
         }
 

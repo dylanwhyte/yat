@@ -35,12 +35,9 @@ impl Control for ControlKnob {
 
     /// Set the controls output value
     fn set_value(&self, port_id: &str, new_value: Option<SampleType>) {
-        match port_id {
-            "value" => {
-                let mut value = self.out_value.write().expect("RwLock is poisoned");
-                *value = new_value;
-            },
-            _ => {},
+        if port_id == "value" {
+            let mut value = self.out_value.write().expect("RwLock is poisoned");
+            *value = new_value;
         }
     }
 

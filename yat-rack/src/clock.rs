@@ -57,3 +57,9 @@ impl Clock {
         }
     }
 }
+
+impl Default for Clock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
