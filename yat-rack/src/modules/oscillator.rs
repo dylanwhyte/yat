@@ -48,12 +48,11 @@ impl Oscillator {
             clock,
         }
     }
-
 }
 
 impl PartialEq for Oscillator {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
 
@@ -121,7 +120,7 @@ impl IoModule for Oscillator {
         match port_id {
             "amp" => self.in_amp = out_port.clone(),
             "freq" => self.in_freq = out_port.clone(),
-            _ => { return Err(PortNotFoundError) },
+            _ => return Err(PortNotFoundError),
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
@@ -135,4 +134,3 @@ impl IoModule for Oscillator {
         self.order = new_order;
     }
 }
-
