@@ -3,7 +3,7 @@ use std::fmt;
 use std::error::Error;
 
 pub type SampleType = f32;
-pub const SAMPLE_RATE: u32 = 44100;
+pub const SAMPLE_RATE: f32 = 44100f32;
 pub const AUDIO_BUF_SIZE: usize = 1024;
 pub type IoPort = Arc<RwLock<Option<SampleType>>>;
 pub type ModuleResult<T> = std::result::Result<T, ModuleNotFoundError>;

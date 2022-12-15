@@ -74,7 +74,10 @@ impl Rack {
                 self.controls.insert(module_id.into(), keyboard);
             }
             "osc" => {
-                let oscillator = Arc::new(Mutex::new(Oscillator::new(module_id.into(), self.clock.read().expect("RwLock is poisoned").time.clone())));
+                let oscillator = Arc::new(Mutex::new(Oscillator::new(
+                    module_id.into(),
+                    self.clock.clone(),
+                )));
                 self.modules.insert(module_id.into(), oscillator);
             },
             "adsr" => {
@@ -368,7 +371,7 @@ impl Rack {
         }
 
         // After each module has been processed update the time for the next round of processing
-        self.clock.read().expect("RwLock is poisoned").increment();
+        self.clock.write().expect("RwLock is poisoned").increment();
     }
 
     // Returns the highest value order in the module_chain hashmap

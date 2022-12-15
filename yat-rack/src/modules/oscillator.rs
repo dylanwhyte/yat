@@ -1,7 +1,8 @@
 use std::sync::{Arc, RwLock};
 
-use crate::types::{IoPort,SampleType, PortResult, PortNotFoundError};
+use crate::clock::Clock;
 use crate::modules::io_module::IoModule;
+use crate::types::{IoPort, PortNotFoundError, PortResult};
 
 /// An oscillator IoModule
 pub struct Oscillator {
@@ -22,12 +23,12 @@ pub struct Oscillator {
     out_audio_out: IoPort,
 
     /// Time of the rack's clock
-    time: Arc<RwLock<SampleType>>,
+    clock: Arc<RwLock<Clock>>,
 }
 
 impl Oscillator {
     /// Create a new, unordered IoModule
-    pub fn new(id: String, time: Arc<RwLock<SampleType>>) -> Self {
+    pub fn new(id: String, clock: Arc<RwLock<Clock>>) -> Self {
         let order = None;
         let input_ports = vec!["amp".to_string(), "freq".to_string()];
         let output_ports = vec!["audio_out".to_string()];
@@ -44,7 +45,7 @@ impl Oscillator {
             in_amp,
             in_freq,
             out_audio_out,
-            time,
+            clock,
         }
     }
 
@@ -61,11 +62,24 @@ impl IoModule for Oscillator {
     fn process_inputs(&mut self) {
         let pi = std::f32::consts::PI;
 
-        let time = *self.time.read().expect("RwLock is poisoned");
+        let time = self
+            .clock
+            .read()
+            .expect("RwLock is poisoned")
+            .get_current_time()
+            .unwrap();
 
-        let amp = self.in_amp.read().expect("RwLock is poisoned").unwrap_or(0.5);
+        let amp = self
+            .in_amp
+            .read()
+            .expect("RwLock is poisoned")
+            .unwrap_or(0.5);
 
-        let freq = self.in_freq.read().expect("RwLock is poisoned").unwrap_or(400.0);
+        let freq = self
+            .in_freq
+            .read()
+            .expect("RwLock is poisoned")
+            .unwrap_or(400.0);
 
         let audio_out = amp * (2.0 * pi * freq * time).sin();
 
