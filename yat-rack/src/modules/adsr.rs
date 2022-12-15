@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use crate::clock::Clock;
-use crate::types::{IoPort,SampleType, PortResult, PortNotFoundError};
 use crate::modules::io_module::IoModule;
+use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType};
 
 #[derive(PartialEq, Eq)]
 enum AdsrState {
@@ -98,12 +98,11 @@ impl Adsr {
             clock: time,
         }
     }
-
 }
 
 impl PartialEq for Adsr {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
 
@@ -266,15 +265,14 @@ impl IoModule for Adsr {
 
     /// Set the value of a module's input port
     fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
-
         match port_id {
-           "audio_in" => self.in_audio = out_port.clone(),
-           "trigger" => self.in_trigger = out_port.clone(),
-           "attack" => self.in_attack = out_port.clone(),
-           "decay" => self.in_decay = out_port.clone(),
-           "sustain" => self.in_sustain = out_port.clone(),
-           "release" => self.in_release = out_port.clone(),
-            _ => { return Err(PortNotFoundError) },
+            "audio_in" => self.in_audio = out_port.clone(),
+            "trigger" => self.in_trigger = out_port.clone(),
+            "attack" => self.in_attack = out_port.clone(),
+            "decay" => self.in_decay = out_port.clone(),
+            "sustain" => self.in_sustain = out_port.clone(),
+            "release" => self.in_release = out_port.clone(),
+            _ => return Err(PortNotFoundError),
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
@@ -288,4 +286,3 @@ impl IoModule for Adsr {
         self.order = new_order;
     }
 }
-

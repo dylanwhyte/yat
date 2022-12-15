@@ -1,6 +1,9 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{types::{IoPort, SampleType}, controls::control::Control};
+use crate::{
+    controls::control::Control,
+    types::{IoPort, SampleType},
+};
 
 /// An control IoModule
 pub struct BasicKeyboard {
@@ -45,12 +48,12 @@ impl Control for BasicKeyboard {
             "gate" => {
                 let mut value = self.out_gate.write().expect("RwLock is poisoned");
                 *value = new_value;
-            },
+            }
             "pitch" => {
                 let mut value = self.out_pitch.write().expect("RwLock is poisoned");
                 *value = new_value;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -142,15 +145,13 @@ impl Control for BasicKeyboard {
             '*' => {
                 self.set_value("gate", Some(0f64));
             }
-            _ => {},
+            _ => {}
         }
     }
-
 }
 
 impl PartialEq for BasicKeyboard {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
-
