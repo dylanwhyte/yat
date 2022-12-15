@@ -112,7 +112,195 @@ impl App {
 
         // Add the audio_out module by defualt
         // TODO: Make sure there is only one of these for now
-        { rack.lock().unwrap().add_module(Arc::new(Mutex::new(audio_out))); }
+        {
+            rack.lock()
+                .unwrap()
+                .add_module(Arc::new(Mutex::new(audio_out)));
+        }
+
+        // Testing setup:
+        // Setup moduels
+        match rack.lock().unwrap().add_module_type("osc", "osc") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        match rack.lock().unwrap().add_module_type("keyboard", "keyboard") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        match rack.lock().unwrap().add_module_type("adsr", "adsr") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        match rack.lock().unwrap().add_module_type("control", "amp") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        match rack.lock().unwrap().add_module_type("control", "attack") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        match rack.lock().unwrap().add_module_type("control", "sustain") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
+        }
+
+        // Set control port values
+        match rack
+            .lock()
+            .unwrap()
+            .set_ctrl_value("amp", "value", Some(1f32))
+        {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to update control: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .set_ctrl_value("attack", "value", Some(3f32))
+        {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to update control: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .set_ctrl_value("sustain", "value", Some(0.4f32))
+        {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to update control: {}", e)),
+        }
+
+        // Connect modules
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("keyboard", "pitch", "osc", "freq")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("keyboard", "gate", "adsr", "trigger")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("osc", "audio_out", "adsr", "audio_in")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("adsr", "audio_out", "audio_out", "audio_in")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("amp", "value", "osc", "amp")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("attack", "value", "adsr", "attack")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("attack", "value", "adsr", "decay")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("attack", "value", "adsr", "release")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        match rack
+            .lock()
+            .unwrap()
+            .connect_modules("sustain", "value", "adsr", "sustain")
+        {
+            Ok(message) => self.messages.push(message),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to connect modules: {}", e)),
+        }
+
+        //match rack.lock().unwrap().connect_modules(
+        //out_module_id,
+        //out_port_id,
+        //in_module_id,
+        //in_port_id
+        //) {
+        //Ok(message) => self.messages.push(message),
+        //Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
+        //}
+
+        // Focus keyboard
+        match rack.lock().unwrap().set_focus_control("keyboard") {
+            Ok(res) => self.messages.push(res),
+            Err(e) => self
+                .messages
+                .push(format!("Failed to focus control: {}", e)),
+        }
 
         App::setup_audio_thread(audio_rx);
 
