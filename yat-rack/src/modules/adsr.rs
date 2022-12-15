@@ -76,8 +76,8 @@ impl Adsr {
         let in_release = Arc::new(RwLock::new(None));
         let out_audio_out = Arc::new(RwLock::new(None));
 
-        let active_time = 0f32;
-        let trigger_time = 0f32;
+        let active_time = 0f64;
+        let trigger_time = 0f64;
         let adsr_state = AdsrState::Inactive;
 
         Self {
@@ -110,18 +110,31 @@ impl PartialEq for Adsr {
 impl IoModule for Adsr {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let trigger_active = self.in_trigger.read().expect("RwLock is poisoned").unwrap_or(0f32) != 0f32;
+        let trigger_active = self
+            .in_trigger
+            .read()
+            .expect("RwLock is poisoned")
+            .unwrap_or(0f64)
+            != 0f64;
 
         // no key is active
         if (self.adsr_state == AdsrState::Inactive) && (!trigger_active) {
             let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
-            *value = Some(0f32);
+            *value = Some(0f64);
         } else {
             // FIXME: Add time to module
             let clock = self.clock.read().expect("RwLock is poisoned");
 
-            let audio_in = self.in_audio.read().expect("RwLock is poisoned").unwrap_or(0f32);
-            let sustain_amp = self.in_sustain.read().expect("RwLock is poisoned").unwrap_or(0.5f32);
+            let audio_in = self
+                .in_audio
+                .read()
+                .expect("RwLock is poisoned")
+                .unwrap_or(0f64);
+            let sustain_amp = self
+                .in_sustain
+                .read()
+                .expect("RwLock is poisoned")
+                .unwrap_or(0.5f64);
 
             // This makes sense as a default value, in case attack and decay are zero
             let mut audio_out = audio_in * sustain_amp;
@@ -131,63 +144,81 @@ impl IoModule for Adsr {
                 AdsrState::Inactive => {
                     if trigger_active {
                         self.trigger_time = clock.get_current_time().unwrap();
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Attack;
                     }
-                },
+                }
                 AdsrState::Attack => {
                     // Transition to max amplitude, and change state to decay after time
                     // If released, go straight to that
                     // Effectively set to zero, but avoiding potential zero division
-                    let attack = self.in_attack.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
+                    let attack = self
+                        .in_attack
+                        .read()
+                        .expect("RwLock is poisoned")
+                        .unwrap_or(clock.time_delta);
                     if !trigger_active {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= attack {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Decay;
                     } else {
                         // Gradually increase amplitude to max
                         audio_out = audio_in * (self.active_time / attack);
                     }
-                },
+                }
                 AdsrState::Decay => {
                     // Transition to sustain amplitude
                     // Effectively set to zero, but avoiding potential zero division
-                    let decay = self.in_decay.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
+                    let decay = self
+                        .in_decay
+                        .read()
+                        .expect("RwLock is poisoned")
+                        .unwrap_or(clock.time_delta);
                     if !trigger_active {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= decay {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Sustain;
                     } else {
-                        let sustain_amp = self.in_sustain.read().expect("RwLock is poisoned").unwrap_or(0.5f32);
+                        let sustain_amp = self
+                            .in_sustain
+                            .read()
+                            .expect("RwLock is poisoned")
+                            .unwrap_or(0.5f64);
 
                         // Decay to sustain amplitude
-                        audio_out = audio_in * (1f32 - ((self.active_time * (1f32 - sustain_amp)) / decay));
+                        audio_out =
+                            audio_in * (1f64 - ((self.active_time * (1f64 - sustain_amp)) / decay));
                     }
-                },
+                }
                 AdsrState::Sustain => {
                     // Output at sustain level while trigger is active
                     if !trigger_active {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else {
                         audio_out = audio_in * sustain_amp;
                     }
-                },
+                }
                 AdsrState::Release => {
                     // Effectively set to zero, but avoiding potential zero division
-                    let release = self.in_release.read().expect("RwLock is poisoned").unwrap_or(clock.time_delta);
+                    let release = self
+                        .in_release
+                        .read()
+                        .expect("RwLock is poisoned")
+                        .unwrap_or(clock.time_delta);
                     // Decay to zero
                     if self.active_time >= release {
-                        self.active_time = 0f32;
+                        self.active_time = 0f64;
                         self.adsr_state = AdsrState::Inactive;
                     } else {
-                        audio_out = audio_in * ((1f32 - (self.active_time / release)) * sustain_amp);
+                        audio_out =
+                            audio_in * ((1f64 - (self.active_time / release)) * sustain_amp);
                     }
-                },
+                }
             }
 
             // Note: while it's technically incorrect to increment here, as it occurs between state transitions,

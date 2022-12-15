@@ -56,8 +56,8 @@ impl PartialEq for Multiplier {
 impl IoModule for Multiplier {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let a = self.in_a.read().expect("RwLock is poisoned").unwrap_or(0f32);
-        let b = self.in_b.read().expect("RwLock is poisoned").unwrap_or(0f32);
+        let a = self.in_a.read().expect("RwLock is poisoned").unwrap_or(0f64);
+        let b = self.in_b.read().expect("RwLock is poisoned").unwrap_or(0f64);
 
         let result = a * b;
 

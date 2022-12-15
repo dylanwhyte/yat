@@ -2,8 +2,8 @@ use std::error::Error;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
-pub type SampleType = f32;
-pub const SAMPLE_RATE: f32 = 44100f32;
+pub type SampleType = f64;
+pub const SAMPLE_RATE: SampleType = 44100f64;
 pub const AUDIO_BUF_SIZE: usize = 1024;
 pub type IoPort = Arc<RwLock<Option<SampleType>>>;
 pub type ModuleResult<T> = std::result::Result<T, ModuleNotFoundError>;

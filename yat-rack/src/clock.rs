@@ -9,7 +9,7 @@ pub struct Clock {
 
 impl Clock {
     pub fn new() -> Self {
-        let time = 0f32;
+        let time = 0f64;
         // FIXME: SAMPLE_RATE should be taken from CPAL config
         let time_delta = 1.0 / SAMPLE_RATE;
         let running = AtomicBool::new(false);

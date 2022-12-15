@@ -59,7 +59,7 @@ impl PartialEq for Oscillator {
 impl IoModule for Oscillator {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let pi = std::f32::consts::PI;
+        let pi = std::f64::consts::PI;
 
         let time = self
             .clock

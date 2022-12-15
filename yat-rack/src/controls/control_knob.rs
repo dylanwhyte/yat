@@ -52,15 +52,15 @@ impl Control for ControlKnob {
         match key {
             'k' => {
                 let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
-                    Some(val) => Some(val + 100f32),
-                    None => Some(0f32),
+                    Some(val) => Some(val + 100f64),
+                    None => Some(0f64),
                 };
                 self.set_value("value", next_value);
             },
             'j' => {
                 let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
-                    Some(val) => Some(val - 100f32),
-                    None => Some(1f32),
+                    Some(val) => Some(val - 100f64),
+                    None => Some(1f64),
                 };
                 self.set_value("value", next_value);
             },

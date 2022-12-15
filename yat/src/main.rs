@@ -154,7 +154,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("amp", "value", Some(1f32))
+            .set_ctrl_value("amp", "value", Some(1f64))
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -165,7 +165,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("attack", "value", Some(3f32))
+            .set_ctrl_value("attack", "value", Some(3f64))
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -176,7 +176,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("sustain", "value", Some(0.4f32))
+            .set_ctrl_value("sustain", "value", Some(0.4f64))
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -731,8 +731,9 @@ impl App {
             config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
-                    let next_sample = match audio_rx.recv() {
-                        Ok(sample) => sample,
+                    // NOTE: Converting from the rack's 64-bit floats to 32-bit for samples
+                    let next_sample: f32 = match audio_rx.recv() {
+                        Ok(sample) => sample as f32,
                         Err(_) => break,
                     };
                     let value: T = cpal::Sample::from::<f32>(&next_sample);

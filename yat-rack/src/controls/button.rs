@@ -39,10 +39,10 @@ impl Control for Button {
                 let mut value = self.out_gate.write().expect("RwLock is poisoned");
 
                 if let Some(new_value) = new_value {
-                    if new_value > 0f32 {
-                        *value = Some(1f32);
+                    if new_value > 0f64 {
+                        *value = Some(1f64);
                     } else {
-                        *value = Some(0f32);
+                        *value = Some(0f64);
                     }
                 }
             },
@@ -59,10 +59,10 @@ impl Control for Button {
             ' ' => {
                 let next_value = match *self.out_gate.read().expect("RwLock has been poisoned") {
                     Some(current_val) => {
-                        if current_val > 0f32 {
-                            Some(0f32)
+                        if current_val > 0f64 {
+                            Some(0f64)
                         } else {
-                            Some(1f32)
+                            Some(1f64)
                         }
                     },
                     None => None,

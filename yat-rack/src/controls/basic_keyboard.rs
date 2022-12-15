@@ -18,8 +18,8 @@ pub struct BasicKeyboard {
 impl BasicKeyboard {
     /// Create a new BasicKeyboard
     pub fn new(id: String) -> Self {
-        let out_gate = Arc::new(RwLock::new(Some(0f32)));
-        let out_pitch = Arc::new(RwLock::new(Some(0f32)));
+        let out_gate = Arc::new(RwLock::new(Some(0f64)));
+        let out_pitch = Arc::new(RwLock::new(Some(0f64)));
 
         Self {
             id,
@@ -60,87 +60,87 @@ impl Control for BasicKeyboard {
         match key {
             // a4
             'a' => {
-                self.set_value("pitch", Some(440f32));
-            },
+                self.set_value("pitch", Some(440f64));
+            }
             // a#4
             'w' => {
-                self.set_value("pitch", Some(466.16f32));
-            },
+                self.set_value("pitch", Some(466.16f64));
+            }
             // b4
             's' => {
-                self.set_value("pitch", Some(493.88f32));
-            },
+                self.set_value("pitch", Some(493.88f64));
+            }
             // c5
             'd' => {
-                self.set_value("pitch", Some(523.25f32));
-            },
+                self.set_value("pitch", Some(523.25f64));
+            }
             // c#5
             'r' => {
-                self.set_value("pitch", Some(554.37f32));
-            },
+                self.set_value("pitch", Some(554.37f64));
+            }
             // d5
             'f' => {
-                self.set_value("pitch", Some(587.33f32));
-            },
+                self.set_value("pitch", Some(587.33f64));
+            }
             // d#5
             't' => {
-                self.set_value("pitch", Some(622.25f32));
-            },
+                self.set_value("pitch", Some(622.25f64));
+            }
             // e5
             'g' => {
-                self.set_value("pitch", Some(659.26f32));
-            },
+                self.set_value("pitch", Some(659.26f64));
+            }
             // f5
             'h' => {
-                self.set_value("pitch", Some(698.46f32));
-            },
+                self.set_value("pitch", Some(698.46f64));
+            }
             // f#5
             'u' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // g5
             'j' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // g#5
             'i' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // a5
             'k' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // a#5
             'o' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // b5
             'l' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // c6
             ';' => {
-                self.set_value("pitch", Some(0f32));
-            },
+                self.set_value("pitch", Some(0f64));
+            }
             // TODO: Need some way to trigger the gate when note is pressed
             // and released. Some random, unneeded character is a temporary
             // (terrible) solution for testing
             ' ' => {
                 //let next_value = match *self.out_gate.read().expect("RwLock is poisoned") {
-                    //// Toggle gate
-                    //Some(current_val) => {
-                        //if current_val > 0f32 {
-                            //Some(0f32)
-                        //} else {
-                            //Some(1f32)
-                        //}
-                    //},
-                    //None => None,
+                //// Toggle gate
+                //Some(current_val) => {
+                //if current_val > 0f64 {
+                //Some(0f64)
+                //} else {
+                //Some(1f64)
+                //}
+                //},
+                //None => None,
                 //};
-                self.set_value("gate", Some(1f32));
-            },
+                self.set_value("gate", Some(1f64));
+            }
             '*' => {
-                self.set_value("gate", Some(0f32));
+                self.set_value("gate", Some(0f64));
             }
             _ => {},
         }
