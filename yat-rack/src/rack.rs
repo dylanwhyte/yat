@@ -26,7 +26,6 @@ pub struct Rack {
     /// Ordered modules for sequential processing
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
 
-    //module_chain: Vec<String>,
     pub clock: Arc<RwLock<Clock>>,
 
     pub running: AtomicBool,
