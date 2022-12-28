@@ -350,8 +350,6 @@ impl App {
                                 KeyEventKind::Press => {
                                     match key.code {
                                         KeyCode::Char(key_code) => {
-                                            //{ press_messages.lock().unwrap().push("Press\n".into()); }
-                                            // Fills buffer
                                             {
                                                 c_rack_ref
                                                     .lock()

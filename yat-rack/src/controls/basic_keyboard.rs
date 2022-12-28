@@ -139,17 +139,6 @@ impl Control for BasicKeyboard {
             // and released. Some random, unneeded character is a temporary
             // (terrible) solution for testing
             ' ' => {
-                //let next_value = match *self.out_gate.read().expect("RwLock is poisoned") {
-                //// Toggle gate
-                //Some(current_val) => {
-                //if current_val > 0f64 {
-                //Some(0f64)
-                //} else {
-                //Some(1f64)
-                //}
-                //},
-                //None => None,
-                //};
                 self.set_value("gate", Some(1f64));
             }
             '*' => {
