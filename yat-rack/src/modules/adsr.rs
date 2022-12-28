@@ -138,7 +138,6 @@ impl IoModule for Adsr {
             // This makes sense as a default value, in case attack and decay are zero
             let mut audio_out = audio_in * sustain_amp;
 
-            // TODO: this may be entirely wrong
             match self.adsr_state {
                 AdsrState::Inactive => {
                     if trigger_active {
@@ -203,19 +202,24 @@ impl IoModule for Adsr {
                     }
                 }
                 AdsrState::Release => {
-                    // Effectively set to zero, but avoiding potential zero division
-                    let release = self
-                        .in_release
-                        .read()
-                        .expect("RwLock is poisoned")
-                        .unwrap_or(clock.time_delta);
-                    // Decay to zero
-                    if self.active_time >= release {
+                    if trigger_active {
                         self.active_time = 0f64;
-                        self.adsr_state = AdsrState::Inactive;
+                        self.adsr_state = AdsrState::Attack;
                     } else {
-                        audio_out =
-                            audio_in * ((1f64 - (self.active_time / release)) * sustain_amp);
+                        // Effectively set to zero, but avoiding potential zero division
+                        let release = self
+                            .in_release
+                            .read()
+                            .expect("RwLock is poisoned")
+                            .unwrap_or(clock.time_delta);
+                        // Decay to zero
+                        if self.active_time >= release {
+                            self.active_time = 0f64;
+                            self.adsr_state = AdsrState::Inactive;
+                        } else {
+                            audio_out =
+                                audio_in * ((1f64 - (self.active_time / release)) * sustain_amp);
+                        }
                     }
                 }
             }
