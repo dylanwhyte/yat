@@ -16,6 +16,9 @@ pub struct BasicKeyboard {
 
     /// The pitch representation of the note that is pressed
     out_pitch: IoPort,
+
+    /// Output velocity.
+    out_velocity: IoPort,
 }
 
 impl BasicKeyboard {
@@ -23,11 +26,13 @@ impl BasicKeyboard {
     pub fn new(id: String) -> Self {
         let out_gate = Arc::new(RwLock::new(Some(0f64)));
         let out_pitch = Arc::new(RwLock::new(Some(0f64)));
+        let out_velocity = Arc::new(RwLock::new(Some(0f64)));
 
         Self {
             id,
             out_gate,
             out_pitch,
+            out_velocity,
         }
     }
 }
@@ -38,6 +43,7 @@ impl Control for BasicKeyboard {
         match port {
             "gate" => Some(self.out_gate.clone()),
             "pitch" => Some(self.out_pitch.clone()),
+            "velocity" => Some(self.out_velocity.clone()),
             _ => None,
         }
     }
@@ -51,6 +57,10 @@ impl Control for BasicKeyboard {
             }
             "pitch" => {
                 let mut value = self.out_pitch.write().expect("RwLock is poisoned");
+                *value = new_value;
+            }
+            "velocity" => {
+                let mut value = self.out_velocity.write().expect("RwLock is poisoned");
                 *value = new_value;
             }
             _ => {}
