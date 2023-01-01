@@ -26,8 +26,11 @@ pub struct Rack {
     /// Ordered modules for sequential processing
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
 
+    /// The Rack's clock keeps track of timing. This is passed to modules
+    /// whose output rely on time
     pub clock: Arc<RwLock<Clock>>,
 
+    /// Determines the rack is in a running/processing or stopped state
     pub running: AtomicBool,
 }
 
