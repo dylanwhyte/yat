@@ -10,7 +10,7 @@ use crate::controls::control_knob::ControlKnob;
 use crate::modules::adsr::Adsr;
 use crate::modules::io_module::IoModule;
 use crate::modules::oscillator::Oscillator;
-use crate::types::{ModuleNotFoundError, ModuleResult, PortNotFoundError, SampleType};
+use crate::types::{ModuleNotFoundError, ModuleResult, PortNotFoundError, SampleType, ConflictingModuleIdError};
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
@@ -57,7 +57,14 @@ impl Rack {
         self.modules.insert(module_id, module);
     }
 
-    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) -> ModuleResult<String> {
+    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+
+        // Dissallow adding modules/controls with identical IDs, so that there can be no
+        // ambiguity when connecting
+        if self.modules.contains_key(module_id) || self.controls.contains_key(module_id) {
+            return Err(Box::new(ConflictingModuleIdError));
+        }
+
         match module_type {
             // Controls
             "control" => {
@@ -83,7 +90,7 @@ impl Rack {
                 let adsr = Arc::new(Mutex::new(Adsr::new(module_id.into(), self.clock.clone())));
                 self.modules.insert(module_id.into(), adsr);
             }
-            _ => return Err(ModuleNotFoundError),
+            _ => return Err(Box::new(ModuleNotFoundError)),
         }
 
         Ok(format!("Add {} with id {}", module_type, module_id))
@@ -100,7 +107,6 @@ impl Rack {
         // Check for presence of the key and remove the module from the hash map if it exists
         // This is the only way I see to have mutible references to two elements of the HashMap
 
-        // TODO: Ensure an ID is unique in both controls and modules
         if self.controls.contains_key(out_module_id) {
             match self.connect_ctrl(out_module_id, out_port_id, in_module_id, in_port_id) {
                 Ok(res) => return Ok(res),
