@@ -26,7 +26,7 @@ use tui::{
 
 use unicode_width::UnicodeWidthStr;
 
-use yat_rack::modules::audio_out::Output;
+use yat_rack::modules::output::Output;
 use yat_rack::rack::Rack;
 use yat_rack::types::SampleType;
 
