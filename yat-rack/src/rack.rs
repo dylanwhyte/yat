@@ -288,8 +288,26 @@ impl Rack {
         ))
     }
 
-    pub fn disconnect_modules(&mut self) {
-        // TODO
+    pub fn disconnect_module(
+        &mut self,
+        module_id: &str,
+        port_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let module = match self.modules.get(module_id) {
+            Some(module) => module,
+            None => return Err(Box::new(ModuleNotFoundError)),
+        };
+
+        module
+            .lock()
+            .expect("Mutex lock is poisoned")
+            .set_in_port(port_id, Arc::new(RwLock::new(None)))?;
+
+
+        Ok(format!(
+            "disconnected {} from module {}",
+            port_id, module_id
+        ))
     }
 
     pub fn connect_ctrl(
@@ -299,7 +317,6 @@ impl Rack {
         in_module_id: &str,
         in_port_id: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        // TODO: Add proper error handling
         let control = match self.controls.get(ctrl_id) {
             Some(control) => control,
             None => return Err(Box::new(ModuleNotFoundError)),
