@@ -221,7 +221,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .connect_modules("adsr", "audio_out", "audio_out", "audio_in")
+            .connect_modules("adsr", "audio_out", "audio_out", "signal_in")
         {
             Ok(message) => self.messages.push(message),
             Err(e) => self
