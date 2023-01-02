@@ -26,7 +26,7 @@ use tui::{
 
 use unicode_width::UnicodeWidthStr;
 
-use yat_rack::modules::audio_out::AudioOut;
+use yat_rack::modules::audio_out::Output;
 use yat_rack::rack::Rack;
 use yat_rack::types::SampleType;
 
@@ -107,7 +107,7 @@ impl Default for App {
 impl App {
     pub fn run_app<B: Backend>(mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         // setup audio and interface
-        let (audio_out, audio_rx) = AudioOut::new(String::from("audio_out"));
+        let (audio_out, audio_rx) = Output::new(String::from("audio_out"));
         let rack = self.rack.clone();
 
         // Add the audio_out module by defualt
