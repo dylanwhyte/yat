@@ -56,7 +56,7 @@ impl Rack {
 
     /// Add a new module to the Rack
     pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModule + Send + Sync>>) {
-        let module_id = { module.lock().expect("Mutex poisoned").get_id().clone() };
+        let module_id = module.lock().expect("Mutex poisoned").get_id().clone();
         self.modules.insert(module_id, module);
     }
 
@@ -82,6 +82,7 @@ impl Rack {
                 let keyboard = Arc::new(Mutex::new(BasicKeyboard::new(module_id.into())));
                 self.controls.insert(module_id.into(), keyboard);
             }
+            // Modules
             "osc" => {
                 let oscillator = Arc::new(Mutex::new(Oscillator::new(
                     module_id.into(),
