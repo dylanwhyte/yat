@@ -59,11 +59,15 @@ pub struct Adsr {
 
     /// Time of the rack's clock
     clock: Arc<RwLock<Clock>>,
+
+    /// Amplitude at the time the trigger is released. This is used to
+    /// smoothly transition from any state in the ADSR to zero.
+    pre_release_amp: SampleType,
 }
 
 impl Adsr {
     /// Create a new, unordered IoModule
-    pub fn new(id: String, time: Arc<RwLock<Clock>>) -> Self {
+    pub fn new(id: String, clock: Arc<RwLock<Clock>>) -> Self {
         let order = None;
         let input_ports = vec!["amp".to_string(), "freq".to_string()];
         let output_ports = vec!["audio_out".to_string()];
@@ -80,6 +84,8 @@ impl Adsr {
         let trigger_time = 0f64;
         let adsr_state = AdsrState::Inactive;
 
+        let pre_release_amp = 0f64;
+
         Self {
             id,
             order,
@@ -95,7 +101,8 @@ impl Adsr {
             active_time,
             trigger_time,
             adsr_state,
-            clock: time,
+            clock,
+            pre_release_amp,
         }
     }
 }
@@ -156,6 +163,7 @@ impl IoModule for Adsr {
                         .expect("RwLock is poisoned")
                         .unwrap_or(clock.time_delta);
                     if !trigger_active {
+                        self.pre_release_amp = self.active_time / attack;
                         self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= attack {
@@ -175,6 +183,7 @@ impl IoModule for Adsr {
                         .expect("RwLock is poisoned")
                         .unwrap_or(clock.time_delta);
                     if !trigger_active {
+                        self.pre_release_amp = 1f64 - ((self.active_time * (1f64 - sustain_amp)) / decay);
                         self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= decay {
@@ -195,6 +204,7 @@ impl IoModule for Adsr {
                 AdsrState::Sustain => {
                     // Output at sustain level while trigger is active
                     if !trigger_active {
+                        self.pre_release_amp = sustain_amp;
                         self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else {
@@ -218,7 +228,7 @@ impl IoModule for Adsr {
                             self.adsr_state = AdsrState::Inactive;
                         } else {
                             audio_out =
-                                audio_in * ((1f64 - (self.active_time / release)) * sustain_amp);
+                                audio_in * ((1f64 - (self.active_time / release)) * self.pre_release_amp);
                         }
                     }
                 }
