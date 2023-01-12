@@ -1,5 +1,5 @@
-pub mod types;
-pub mod rack;
 pub mod clock;
-pub mod modules;
 pub mod controls;
+pub mod modules;
+pub mod rack;
+pub mod types;

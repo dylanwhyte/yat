@@ -183,7 +183,8 @@ impl IoModule for Adsr {
                         .expect("RwLock is poisoned")
                         .unwrap_or(clock.time_delta);
                     if !trigger_active {
-                        self.pre_release_amp = 1f64 - ((self.active_time * (1f64 - sustain_amp)) / decay);
+                        self.pre_release_amp =
+                            1f64 - ((self.active_time * (1f64 - sustain_amp)) / decay);
                         self.active_time = 0f64;
                         self.adsr_state = AdsrState::Release;
                     } else if self.active_time >= decay {
@@ -227,8 +228,8 @@ impl IoModule for Adsr {
                             self.active_time = 0f64;
                             self.adsr_state = AdsrState::Inactive;
                         } else {
-                            audio_out =
-                                audio_in * ((1f64 - (self.active_time / release)) * self.pre_release_amp);
+                            audio_out = audio_in
+                                * ((1f64 - (self.active_time / release)) * self.pre_release_amp);
                         }
                     }
                 }

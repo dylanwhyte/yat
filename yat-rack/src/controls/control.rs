@@ -14,4 +14,3 @@ pub trait Control {
     /// it's output accordingly (somewhat akin to a module's processing function)
     fn recv_control_key(&self, key: char);
 }
-

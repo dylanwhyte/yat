@@ -1,6 +1,9 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{types::{IoPort, SampleType}, controls::control::Control};
+use crate::{
+    controls::control::Control,
+    types::{IoPort, SampleType},
+};
 
 /// An control IoModule
 pub struct Button {
@@ -45,31 +48,30 @@ impl Control for Button {
                 }
             }
         }
-   }
+    }
 
     /// Receive and handle a control keys.
     /// For a button, the spacebar toggles the button on and off
     fn recv_control_key(&self, key: char) {
-            if key == ' ' {
+        if key == ' ' {
             // Toggle between on and off, using space
-                let next_value = match *self.out_gate.read().expect("RwLock has been poisoned") {
-                    Some(current_val) => {
-                        if current_val > 0f64 {
-                            Some(0f64)
-                        } else {
-                            Some(1f64)
-                        }
-                    },
-                    None => None,
-                };
-                self.set_value("gate", next_value);
+            let next_value = match *self.out_gate.read().expect("RwLock has been poisoned") {
+                Some(current_val) => {
+                    if current_val > 0f64 {
+                        Some(0f64)
+                    } else {
+                        Some(1f64)
+                    }
+                }
+                None => None,
+            };
+            self.set_value("gate", next_value);
         }
     }
 }
 
 impl PartialEq for Button {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
-

@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
-use crate::types::{IoPort, SampleType};
 use crate::controls::control::Control;
+use crate::types::{IoPort, SampleType};
 
 /// An control
 pub struct ControlKnob {
@@ -17,10 +17,7 @@ impl ControlKnob {
     pub fn new(id: String) -> Self {
         let out_value = Arc::new(RwLock::new(None));
 
-        Self {
-            id,
-            out_value,
-        }
+        Self { id, out_value }
     }
 }
 
@@ -53,14 +50,14 @@ impl Control for ControlKnob {
                     None => Some(0f64),
                 };
                 self.set_value("value", next_value);
-            },
+            }
             'j' => {
                 let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
                     Some(val) => Some(val - 100f64),
                     None => Some(1f64),
                 };
                 self.set_value("value", next_value);
-            },
+            }
             _ => (),
         }
     }
@@ -68,7 +65,6 @@ impl Control for ControlKnob {
 
 impl PartialEq for ControlKnob {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
-

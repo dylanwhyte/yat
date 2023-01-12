@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
-use crate::types::{IoPort, PortResult, PortNotFoundError};
 use crate::modules::io_module::IoModule;
+use crate::types::{IoPort, PortNotFoundError, PortResult};
 
 /// A module which multiplies its input signals and
 /// outputs the result
@@ -44,20 +44,27 @@ impl Multiplier {
             out_result,
         }
     }
-
 }
 
 impl PartialEq for Multiplier {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
 
 impl IoModule for Multiplier {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let a = self.in_a.read().expect("RwLock is poisoned").unwrap_or(0f64);
-        let b = self.in_b.read().expect("RwLock is poisoned").unwrap_or(0f64);
+        let a = self
+            .in_a
+            .read()
+            .expect("RwLock is poisoned")
+            .unwrap_or(0f64);
+        let b = self
+            .in_b
+            .read()
+            .expect("RwLock is poisoned")
+            .unwrap_or(0f64);
 
         let result = a * b;
 
@@ -99,7 +106,7 @@ impl IoModule for Multiplier {
         match port_id {
             "a" => self.in_a = out_port,
             "b" => self.in_b = out_port,
-            _ => { return Err(PortNotFoundError) },
+            _ => return Err(PortNotFoundError),
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
@@ -113,4 +120,3 @@ impl IoModule for Multiplier {
         self.order = new_order;
     }
 }
-

@@ -1,8 +1,8 @@
-use std::sync::{Arc, RwLock};
 use std::sync::mpsc::{self, Receiver};
+use std::sync::{Arc, RwLock};
 
-use crate::types::{AUDIO_BUF_SIZE, IoPort, PortResult, PortNotFoundError, SampleType};
 use crate::modules::io_module::IoModule;
+use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType, AUDIO_BUF_SIZE};
 
 /// An exit point from a Rack, e.g. for audio output
 pub struct Output {
@@ -45,12 +45,11 @@ impl Output {
 
         (output, signal_rx)
     }
-
 }
 
 impl PartialEq for Output {
     fn eq(&self, other: &Self) -> bool {
-            self.id == other.id
+        self.id == other.id
     }
 }
 
@@ -92,7 +91,9 @@ impl IoModule for Output {
             "signal_in" => {
                 self.in_signal_in = out_port;
             }
-            _ => { return  Err(PortNotFoundError); },
+            _ => {
+                return Err(PortNotFoundError);
+            }
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))
@@ -106,4 +107,3 @@ impl IoModule for Output {
         self.order = new_order;
     }
 }
-

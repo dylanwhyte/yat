@@ -10,7 +10,9 @@ use crate::controls::control_knob::ControlKnob;
 use crate::modules::adsr::Adsr;
 use crate::modules::io_module::IoModule;
 use crate::modules::oscillator::Oscillator;
-use crate::types::{ModuleNotFoundError, ModuleResult, PortNotFoundError, SampleType, ConflictingModuleIdError};
+use crate::types::{
+    ConflictingModuleIdError, ModuleNotFoundError, ModuleResult, PortNotFoundError, SampleType,
+};
 
 /// A Rack encompasses a group of conntected modules
 pub struct Rack {
@@ -60,8 +62,11 @@ impl Rack {
         self.modules.insert(module_id, module);
     }
 
-    pub fn add_module_type(&mut self, module_type: &str, module_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-
+    pub fn add_module_type(
+        &mut self,
+        module_type: &str,
+        module_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Dissallow adding modules/controls with identical IDs, so that there can be no
         // ambiguity when connecting
         if self.modules.contains_key(module_id) || self.controls.contains_key(module_id) {
@@ -172,8 +177,7 @@ impl Rack {
                 .set_in_port(in_port_id, out_port)?;
         } else {
             // Add previously removed module back before failure
-            self.modules
-                .insert(String::from(in_module_id), in_module);
+            self.modules.insert(String::from(in_module_id), in_module);
             return Err(Box::new(ModuleNotFoundError));
         }
 
@@ -303,7 +307,6 @@ impl Rack {
             .lock()
             .expect("Mutex lock is poisoned")
             .set_in_port(port_id, Arc::new(RwLock::new(None)))?;
-
 
         Ok(format!(
             "disconnected {} from module {}",
