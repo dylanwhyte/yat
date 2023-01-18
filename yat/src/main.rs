@@ -314,9 +314,7 @@ impl App {
                 // TODO: Use std::sync::Convar to actually block CPU
                 loop {
                     while *s_rack_ref.lock().unwrap().running.get_mut() {
-                        {
                             s_rack_ref.lock().unwrap().process_module_chain();
-                        }
                     }
                     match quit_rx.try_recv() {
                         Ok(_) => break,
