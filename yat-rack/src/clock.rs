@@ -1,5 +1,6 @@
 use crate::types::{SampleType, SAMPLE_RATE};
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::Relaxed;
 
 pub struct Clock {
     time: SampleType,
@@ -22,9 +23,9 @@ impl Clock {
     }
 
     pub fn start_clock(&mut self) {
-        *self.running.get_mut() = true;
+        self.running.store(true, Relaxed);
 
-        while *self.running.get_mut() {
+        while self.running.load(Relaxed) {
             self.increment();
         }
     }

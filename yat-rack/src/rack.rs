@@ -1,5 +1,6 @@
 use hashbrown::HashMap;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::clock::Clock;
@@ -527,11 +528,11 @@ impl Rack {
     }
 
     pub fn run(&mut self) {
-        *self.running.get_mut() = true;
+        self.running.store(true, Relaxed);
     }
 
     pub fn stop(&mut self) {
-        *self.running.get_mut() = false;
+        self.running.store(false, Relaxed);
     }
 }
 
