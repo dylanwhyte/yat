@@ -28,7 +28,7 @@ use unicode_width::UnicodeWidthStr;
 
 use yat_rack::modules::output::Output;
 use yat_rack::rack::Rack;
-use yat_rack::types::SampleType;
+use yat_rack::types::{SampleType, SAMPLE_RATE};
 
 fn main() -> Result<(), io::Error> {
     // setup terminal
@@ -702,7 +702,18 @@ impl App {
         let _ = thread::spawn(move || {
             let host = cpal::default_host();
             let device = host.default_output_device().expect("no device available");
-            let config = device.default_output_config().unwrap();
+
+            let channels = 2u16;
+            let sample_rate = cpal::SampleRate(SAMPLE_RATE as u32);
+            let suported_buffer_size = cpal::SupportedBufferSize::Unknown;
+            let sample_format = cpal::SampleFormat::F32;
+
+            let config = cpal::SupportedStreamConfig::new(
+                channels,
+                sample_rate,
+                suported_buffer_size,
+                sample_format
+                );
 
             match config.sample_format() {
                 SampleFormat::F32 => App::run::<f32>(&device, &config.into(), audio_rx).unwrap(),
