@@ -116,7 +116,6 @@ impl Rack {
     ) -> Result<String, Box<dyn std::error::Error>> {
         // Check for presence of the key and remove the module from the hash map if it exists
         // This is the only way I see to have mutible references to two elements of the HashMap
-
         if self.controls.contains_key(out_module_id) {
             match self.connect_ctrl(out_module_id, out_port_id, in_module_id, in_port_id) {
                 Ok(res) => return Ok(res),
@@ -182,6 +181,7 @@ impl Rack {
             return Err(Box::new(ModuleNotFoundError));
         }
 
+        // Set module order
         let out_module_order = {
             out_module
                 .lock()
