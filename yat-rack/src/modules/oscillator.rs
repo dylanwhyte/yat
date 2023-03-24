@@ -1,6 +1,5 @@
 use std::sync::{Arc, RwLock};
 
-use crate::clock::Clock;
 use crate::modules::io_module::IoModule;
 use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType, SAMPLE_RATE};
 
