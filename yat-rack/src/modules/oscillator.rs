@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::clock::Clock;
 use crate::modules::io_module::IoModule;
-use crate::types::{IoPort, PortNotFoundError, PortResult};
+use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType, SAMPLE_RATE};
 
 /// An oscillator IoModule
 pub struct Oscillator {
@@ -22,13 +22,13 @@ pub struct Oscillator {
 
     out_audio_out: IoPort,
 
-    /// Time of the rack's clock
-    clock: Arc<RwLock<Clock>>,
+    /// Value for phase acucumulator
+    phase: SampleType,
 }
 
 impl Oscillator {
     /// Create a new, unordered IoModule
-    pub fn new(id: String, clock: Arc<RwLock<Clock>>) -> Self {
+    pub fn new(id: String) -> Self {
         let order = None;
         let input_ports = vec!["amp".to_string(), "freq".to_string()];
         let output_ports = vec!["audio_out".to_string()];
@@ -36,6 +36,7 @@ impl Oscillator {
         let in_amp = Arc::new(RwLock::new(None));
         let in_freq = Arc::new(RwLock::new(None));
         let out_audio_out = Arc::new(RwLock::new(None));
+        let phase = 0f64;
 
         Self {
             id,
@@ -45,7 +46,7 @@ impl Oscillator {
             in_amp,
             in_freq,
             out_audio_out,
-            clock,
+            phase,
         }
     }
 }
@@ -61,13 +62,6 @@ impl IoModule for Oscillator {
     fn process_inputs(&mut self) {
         let pi = std::f64::consts::PI;
 
-        let time = self
-            .clock
-            .read()
-            .expect("RwLock is poisoned")
-            .get_current_time()
-            .unwrap();
-
         let amp = self
             .in_amp
             .read()
@@ -80,7 +74,8 @@ impl IoModule for Oscillator {
             .expect("RwLock is poisoned")
             .unwrap_or(400.0);
 
-        let audio_out = amp * (2.0 * pi * freq * time).sin();
+        self.phase += (2.0 * pi * freq) / SAMPLE_RATE;
+        let audio_out = amp * self.phase.sin();
 
         let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
         *value = Some(audio_out);
