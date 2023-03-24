@@ -101,11 +101,6 @@ impl Rack {
                 let oscillator = Arc::new(Mutex::new(Oscillator::new(module_id.into())));
                 self.modules.insert(module_id.into(), oscillator);
             }
-                    module_id.into(),
-                    self.clock.clone(),
-                )));
-                self.modules.insert(module_id.into(), oscillator);
-            }
             "adsr" => {
                 let adsr = Arc::new(Mutex::new(Adsr::new(module_id.into(), self.clock.clone())));
                 self.modules.insert(module_id.into(), adsr);
