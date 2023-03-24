@@ -58,9 +58,17 @@ impl Rack {
     }
 
     /// Add a new module to the Rack
-    pub fn add_module(&mut self, module: Arc<Mutex<dyn IoModule + Send + Sync>>) {
+    pub fn add_module(
+        &mut self,
+        module: Arc<Mutex<dyn IoModule + Send + Sync>>
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let module_id = module.lock().expect("Mutex poisoned").get_id().clone();
-        self.modules.insert(module_id, module);
+        if self.modules.contains_key(&module_id) || self.controls.contains_key(&module_id) {
+            return Err(Box::new(ConflictingModuleIdError));
+        }
+        self.modules.insert(module_id.clone(), module.to_owned());
+
+        Ok(format!("Added module: {}", module_id))
     }
 
     pub fn add_module_type(
