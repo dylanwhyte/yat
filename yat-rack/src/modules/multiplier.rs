@@ -1,7 +1,9 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock, Weak};
 
+use crate::in_port::InPort;
 use crate::modules::io_module::IoModule;
-use crate::types::{IoPort, PortNotFoundError, PortResult};
+use crate::out_port::OutPort;
+use crate::types::{PortNotFoundError, PortResult, SampleType};
 
 /// A module which multiplies its input signals and
 /// outputs the result
@@ -16,11 +18,11 @@ pub struct Multiplier {
 
     output_ports: Vec<String>,
 
-    in_a: IoPort,
+    in_a: InPort,
 
-    in_b: IoPort,
+    in_b: InPort,
 
-    out_result: IoPort,
+    out_mult: OutPort,
 }
 
 impl Multiplier {
@@ -30,9 +32,9 @@ impl Multiplier {
         let input_ports = vec!["in_a".to_string(), "in_b".to_string()];
         let output_ports = vec!["result".to_string()];
 
-        let in_a = Arc::new(RwLock::new(None));
-        let in_b = Arc::new(RwLock::new(None));
-        let out_result = Arc::new(RwLock::new(None));
+        let in_a = InPort::new("a".into(), SampleType::MIN, SampleType::MAX, 0.0);
+        let in_b = InPort::new("b".into(), SampleType::MIN, SampleType::MAX, 0.0);
+        let out_mult = OutPort::new("mult".into());
 
         Self {
             id,
@@ -41,7 +43,7 @@ impl Multiplier {
             output_ports,
             in_a,
             in_b,
-            out_result,
+            out_mult,
         }
     }
 }
@@ -55,21 +57,12 @@ impl PartialEq for Multiplier {
 impl IoModule for Multiplier {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let a = self
-            .in_a
-            .read()
-            .expect("RwLock is poisoned")
-            .unwrap_or(0f64);
-        let b = self
-            .in_b
-            .read()
-            .expect("RwLock is poisoned")
-            .unwrap_or(0f64);
+        let a = self.in_a.get_value();
+        let b = self.in_b.get_value();
 
-        let result = a * b;
+        let mult = a * b;
 
-        let mut value = self.out_result.write().expect("RwLock is poisoned");
-        *value = Some(result);
+        self.out_mult.set_value(mult);
     }
 
     /// Return a module's ID
@@ -86,26 +79,25 @@ impl IoModule for Multiplier {
     }
 
     /// Return a reference to one of the module's input ports
-    fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn has_port_with_id(&self, port_id: &str) -> bool {
         match port_id {
-            "a" => Some(self.in_a.clone()),
-            "b" => Some(self.in_b.clone()),
-            _ => None,
+            "a" | "b" => true,
+            _ => false,
         }
     }
 
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn get_out_port_ref(&self, port_id: &str) -> Option<&OutPort> {
         match port_id {
-            "result" => Some(self.out_result.clone()),
+            "result" => Some(&self.out_mult),
             _ => None,
         }
     }
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
+    fn set_in_port(&mut self, port_id: &str, out_port_ref: Weak<RwLock<Option<SampleType>>>) -> PortResult<String> {
         match port_id {
-            "a" => self.in_a = out_port,
-            "b" => self.in_b = out_port,
+            "a" => self.in_a.set_value(out_port_ref),
+            "b" => self.in_b.set_value(out_port_ref),
             _ => return Err(PortNotFoundError),
         }
 

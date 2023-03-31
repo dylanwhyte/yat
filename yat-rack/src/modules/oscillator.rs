@@ -1,7 +1,9 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock, Weak};
 
 use crate::modules::io_module::IoModule;
-use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType, SAMPLE_RATE};
+use crate::types::{PortNotFoundError, PortResult, SampleType, SAMPLE_RATE};
+use crate::in_port::InPort;
+use crate::out_port::OutPort;
 
 /// An oscillator IoModule
 pub struct Oscillator {
@@ -15,11 +17,11 @@ pub struct Oscillator {
 
     output_ports: Vec<String>,
 
-    in_amp: IoPort,
+    in_amp: InPort,
 
-    in_freq: IoPort,
+    in_freq: InPort,
 
-    out_audio_out: IoPort,
+    out_audio_out: OutPort,
 
     /// Value for phase acucumulator
     phase: SampleType,
@@ -32,9 +34,9 @@ impl Oscillator {
         let input_ports = vec!["amp".to_string(), "freq".to_string()];
         let output_ports = vec!["audio_out".to_string()];
 
-        let in_amp = Arc::new(RwLock::new(None));
-        let in_freq = Arc::new(RwLock::new(None));
-        let out_audio_out = Arc::new(RwLock::new(None));
+        let in_amp = InPort::new("amp".into(), 0.0, 1.0, 0.5);
+        let in_freq = InPort::new("freq".into(), 0.0, 20_000.0, 1000.0);
+        let out_audio_out = OutPort::new("audio_out".into());
         let phase = 0f64;
 
         Self {
@@ -61,23 +63,14 @@ impl IoModule for Oscillator {
     fn process_inputs(&mut self) {
         let pi = std::f64::consts::PI;
 
-        let amp = self
-            .in_amp
-            .read()
-            .expect("RwLock is poisoned")
-            .unwrap_or(0.5);
+        let amp = self.in_amp.get_value();
 
-        let freq = self
-            .in_freq
-            .read()
-            .expect("RwLock is poisoned")
-            .unwrap_or(400.0);
+        let freq = self.in_freq.get_value();
 
         self.phase += (2.0 * pi * freq) / SAMPLE_RATE;
         let audio_out = amp * self.phase.sin();
 
-        let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
-        *value = Some(audio_out);
+        self.out_audio_out.set_value(audio_out);
     }
 
     /// Return a module's ID
@@ -94,26 +87,25 @@ impl IoModule for Oscillator {
     }
 
     /// Return a reference to one of the module's input ports
-    fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn has_port_with_id(&self, port_id: &str) -> bool {
         match port_id {
-            "amp" => Some(self.in_amp.clone()),
-            "freq" => Some(self.in_freq.clone()),
-            _ => None,
+            "amp" | "freq"  => true,
+            _ => false,
         }
     }
 
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn get_out_port_ref(&self, port_id: &str) -> Option<&OutPort> {
         match port_id {
-            "audio_out" => Some(self.out_audio_out.clone()),
+            "audio_out" => Some(&self.out_audio_out),
             _ => None,
         }
     }
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
+    fn set_in_port(&mut self, port_id: &str, out_port_ref: Weak<RwLock<Option<SampleType>>>) -> PortResult<String> {
         match port_id {
-            "amp" => self.in_amp = out_port,
-            "freq" => self.in_freq = out_port,
+            "amp" => self.in_amp.set_value(out_port_ref),
+            "freq" => self.in_freq.set_value(out_port_ref),
             _ => return Err(PortNotFoundError),
         }
 

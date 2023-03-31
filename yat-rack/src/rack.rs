@@ -1,7 +1,7 @@
 use hashbrown::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use crate::clock::Clock;
 use crate::controls::basic_keyboard::BasicKeyboard;
@@ -380,7 +380,7 @@ impl Rack {
         &mut self,
         ctrl_id: &str,
         port_id: &str,
-        value: Option<SampleType>,
+        value: SampleType,
     ) -> ModuleResult<String> {
         match self.controls.get(ctrl_id) {
             Some(ctrl) => ctrl

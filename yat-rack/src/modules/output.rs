@@ -1,8 +1,10 @@
 use std::sync::mpsc::{self, Receiver};
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock, Weak};
 
+use crate::in_port::InPort;
+use crate::out_port::OutPort;
 use crate::modules::io_module::IoModule;
-use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType, AUDIO_BUF_SIZE};
+use crate::types::{PortNotFoundError, PortResult, SampleType, AUDIO_BUF_SIZE};
 
 /// An exit point from a Rack, e.g. for audio output
 pub struct Output {
@@ -16,7 +18,7 @@ pub struct Output {
 
     output_ports: Vec<String>,
 
-    in_signal_in: IoPort,
+    in_signal_in: InPort,
 
     /// A channel for sending data from the rack's chain to outside the rack
     out_signal_tx: mpsc::SyncSender<SampleType>,
@@ -30,7 +32,7 @@ impl Output {
         let input_ports = vec!["signal_in".to_string()];
         let output_ports = vec!["signal_out".to_string()];
 
-        let in_signal_in = Arc::new(RwLock::new(None));
+        let in_signal_in = InPort::new("signal_in".into(), -1.0, 1.0, 0.0);
 
         let (out_signal_tx, signal_rx) = mpsc::sync_channel(AUDIO_BUF_SIZE);
 
@@ -55,9 +57,9 @@ impl PartialEq for Output {
 
 impl IoModule for Output {
     fn process_inputs(&mut self) {
-        let signal_in = *self.in_signal_in.read().expect("RwLock is poisoned");
+        let signal_in = self.in_signal_in.get_value();
 
-        self.out_signal_tx.send(signal_in.unwrap()).unwrap();
+        self.out_signal_tx.send(signal_in).unwrap();
     }
 
     /// Return a module's ID
@@ -74,26 +76,22 @@ impl IoModule for Output {
     }
 
     /// Return a reference to the module's input ports
-    fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn has_port_with_id(&self, port_id: &str) -> bool {
         match port_id {
-            "signal_in" => Some(self.in_signal_in.clone()),
-            _ => None,
+            "signal_in" => true,
+            _ => false,
         }
     }
 
-    fn get_out_port_ref(&self, _port_id: &str) -> Option<IoPort> {
+    fn get_out_port_ref(&self, _port_id: &str) -> Option<&OutPort> {
         None
     }
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
+    fn set_in_port(&mut self, port_id: &str, out_port_ref: Weak<RwLock<Option<SampleType>>>) -> PortResult<String> {
         match port_id {
-            "signal_in" => {
-                self.in_signal_in = out_port;
-            }
-            _ => {
-                return Err(PortNotFoundError);
-            }
+            "signal_in" => self.in_signal_in.set_value(out_port_ref),
+            _ => return Err(PortNotFoundError),
         }
 
         Ok(format!("{}: Set port {}\n", self.get_id(), port_id))

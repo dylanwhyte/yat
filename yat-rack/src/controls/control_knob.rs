@@ -1,7 +1,8 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock, Weak};
 
 use crate::controls::control::Control;
-use crate::types::{IoPort, SampleType};
+use crate::out_port::OutPort;
+use crate::types::SampleType;
 
 /// An control
 pub struct ControlKnob {
@@ -9,32 +10,35 @@ pub struct ControlKnob {
     id: String,
 
     /// The control's output value
-    out_value: IoPort,
+    out_value: OutPort,
 }
 
 impl ControlKnob {
     /// Create a new, unordered IoModule
     pub fn new(id: String) -> Self {
-        let out_value = Arc::new(RwLock::new(None));
+        let out_value = OutPort::new("value".into());
 
-        Self { id, out_value }
+        Self {
+            id,
+            out_value,
+        }
     }
 }
 
 impl Control for ControlKnob {
     /// Get a reference to the control's output port
-    fn get_port_reference(&self, port_id: &str) -> Option<IoPort> {
+    fn get_port_reference(&self, port_id: &str)
+        -> Option<Weak<RwLock<Option<SampleType>>>> {
         match port_id {
-            "value" => Some(self.out_value.clone()),
+            "value" => Some(self.out_value.get_ref()),
             _ => None,
         }
     }
 
     /// Set the controls output value
-    fn set_value(&self, port_id: &str, new_value: Option<SampleType>) {
+    fn set_value(&self, port_id: &str, new_value: SampleType) {
         if port_id == "value" {
-            let mut value = self.out_value.write().expect("RwLock is poisoned");
-            *value = new_value;
+            self.out_value.set_value(new_value);
         }
     }
 
@@ -45,16 +49,22 @@ impl Control for ControlKnob {
     fn recv_control_key(&self, key: char) {
         match key {
             'k' => {
-                let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
-                    Some(val) => Some(val + 100f64),
-                    None => Some(0f64),
+                let next_value = match self.out_value.get_ref().upgrade() {
+                    Some(val) => {
+                        let val = val.read().expect("RwLock poisoned").unwrap_or(0.0);
+                        val + 100f64
+                    },
+                    None => 0f64,
                 };
                 self.set_value("value", next_value);
             }
             'j' => {
-                let next_value = match *self.out_value.read().expect("RwLock is poisoned") {
-                    Some(val) => Some(val - 100f64),
-                    None => Some(1f64),
+                let next_value = match self.out_value.get_ref().upgrade() {
+                    Some(val) => {
+                        let val = val.read().expect("RwLock poisoned").unwrap_or(0.0);
+                        val - 100f64
+                    },
+                    None => 0f64,
                 };
                 self.set_value("value", next_value);
             }

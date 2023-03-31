@@ -1,4 +1,7 @@
-use crate::types::{IoPort, PortResult};
+use std::sync::{RwLock, Weak};
+
+use crate::types::{PortResult, SampleType};
+use crate::out_port::OutPort;
 
 pub trait IoModule {
     /// Calculate the module's outputs based on inputs
@@ -14,13 +17,16 @@ pub trait IoModule {
     fn get_out_ports(&self) -> &Vec<String>;
 
     /// Returns a reference to a single input port
-    fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort>;
+    fn has_port_with_id(&self, port_id: &str) -> bool;
 
     /// Returns a reference to a single output port
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort>;
+    fn get_out_port_ref(&self, port_id: &str) -> Option<&OutPort>;
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String>;
+    fn set_in_port(
+        &mut self, port_id: &str,
+        out_port_ref: Weak<RwLock<Option<SampleType>>>)
+        -> PortResult<String>;
 
     /// Get a modules processing order
     fn get_module_order(&self) -> Option<u64>;

@@ -1,11 +1,11 @@
 use std::error::Error;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+// use std::sync::{Arc, RwLock};
 
 pub type SampleType = f64;
 pub const SAMPLE_RATE: SampleType = 96000f64;
 pub const AUDIO_BUF_SIZE: usize = 1024;
-pub type IoPort = Arc<RwLock<Option<SampleType>>>;
+// pub type IoPort = Arc<RwLock<Option<SampleType>>>;
 pub type ModuleResult<T> = std::result::Result<T, ModuleNotFoundError>;
 pub type ModuleIdResult<T> = std::result::Result<T, ModuleNotFoundError>;
 pub type PortResult<T> = std::result::Result<T, PortNotFoundError>;

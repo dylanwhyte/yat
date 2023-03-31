@@ -1,8 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 
 use crate::clock::Clock;
 use crate::modules::io_module::IoModule;
-use crate::types::{IoPort, PortNotFoundError, PortResult, SampleType};
+use crate::types::{PortNotFoundError, PortResult, SampleType};
+use crate::in_port::InPort;
+use crate::out_port::OutPort;
 
 #[derive(PartialEq, Eq)]
 enum AdsrState {
@@ -26,27 +28,27 @@ pub struct Adsr {
     output_ports: Vec<String>,
 
     /// The input audio signal
-    in_audio: IoPort,
+    in_audio_in: InPort,
 
     /// The signal which informs the envelope generator that a note is
     /// active
-    in_trigger: IoPort,
+    in_trigger: InPort,
 
     /// The time (seconds) until the signal's full amplitude is reached
-    in_attack: IoPort,
+    in_attack: InPort,
 
     /// The time (seconds) until the signal decays to the sustain amplitude
-    in_decay: IoPort,
+    in_decay: InPort,
 
     /// The percentage amplitude to remain at, while a not is held
-    in_sustain: IoPort,
+    in_sustain: InPort,
 
     /// The time (seconds) for the amplitude to fully decay after a
     /// note is released
-    in_release: IoPort,
+    in_release: InPort,
 
     /// The modulated output signal of the envelope generator
-    out_audio_out: IoPort,
+    out_audio_out: OutPort,
 
     /// The current time for which a note has been active
     active_time: SampleType,
@@ -72,13 +74,15 @@ impl Adsr {
         let input_ports = vec!["amp".to_string(), "freq".to_string()];
         let output_ports = vec!["audio_out".to_string()];
 
-        let in_audio = Arc::new(RwLock::new(None));
-        let in_trigger = Arc::new(RwLock::new(None));
-        let in_attack = Arc::new(RwLock::new(None));
-        let in_decay = Arc::new(RwLock::new(None));
-        let in_sustain = Arc::new(RwLock::new(None));
-        let in_release = Arc::new(RwLock::new(None));
-        let out_audio_out = Arc::new(RwLock::new(None));
+        let time_delta = clock.read().expect("RwLock is poisoned").time_delta;
+
+        let in_audio_in = InPort::new("audio_in".into(), -0.5, 0.5, 0.0);
+        let in_trigger = InPort::new("trigger".into(), 0.0, 1.0, 0.0);
+        let in_attack = InPort::new("attack".into(), 0.0, 1.0, time_delta);
+        let in_decay = InPort::new("decay".into(), 0.0, 1.0, time_delta);
+        let in_sustain = InPort::new("sustain".into(), 0.0, 1.0, 1.0);
+        let in_release = InPort::new("release".into(), 0.0, 1.0, time_delta);
+        let out_audio_out = OutPort::new("audio_out".into());
 
         let active_time = 0f64;
         let trigger_time = 0f64;
@@ -91,7 +95,7 @@ impl Adsr {
             order,
             input_ports,
             output_ports,
-            in_audio,
+            in_audio_in,
             in_trigger,
             in_attack,
             in_decay,
@@ -116,31 +120,18 @@ impl PartialEq for Adsr {
 impl IoModule for Adsr {
     /// Read inputs and populate outputs
     fn process_inputs(&mut self) {
-        let trigger_active = self
-            .in_trigger
-            .read()
-            .expect("RwLock is poisoned")
-            .unwrap_or(0f64)
-            != 0f64;
+        let trigger_active = self.in_trigger.get_value() != 0.0;
 
         // no key is active
         if (self.adsr_state == AdsrState::Inactive) && (!trigger_active) {
-            let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
-            *value = Some(0f64);
+            self.out_audio_out.set_value(0.0);
         } else {
             // FIXME: Add time to module
             let clock = self.clock.read().expect("RwLock is poisoned");
 
-            let audio_in = self
-                .in_audio
-                .read()
-                .expect("RwLock is poisoned")
-                .unwrap_or(0f64);
-            let sustain_amp = self
-                .in_sustain
-                .read()
-                .expect("RwLock is poisoned")
-                .unwrap_or(0.5f64);
+            let audio_in = self.in_audio_in.get_value();
+
+            let sustain_amp = self.in_sustain.get_value();
 
             // This makes sense as a default value, in case attack and decay are zero
             let mut audio_out = audio_in * sustain_amp;
@@ -157,11 +148,8 @@ impl IoModule for Adsr {
                     // Transition to max amplitude, and change state to decay after time
                     // If released, go straight to that
                     // Effectively set to zero, but avoiding potential zero division
-                    let attack = self
-                        .in_attack
-                        .read()
-                        .expect("RwLock is poisoned")
-                        .unwrap_or(clock.time_delta);
+                    let attack = self.in_attack.get_value();
+
                     if !trigger_active {
                         self.pre_release_amp = self.active_time / attack;
                         self.active_time = 0f64;
@@ -177,11 +165,8 @@ impl IoModule for Adsr {
                 AdsrState::Decay => {
                     // Transition to sustain amplitude
                     // Effectively set to zero, but avoiding potential zero division
-                    let decay = self
-                        .in_decay
-                        .read()
-                        .expect("RwLock is poisoned")
-                        .unwrap_or(clock.time_delta);
+                    let decay = self.in_decay.get_value();
+
                     if !trigger_active {
                         self.pre_release_amp =
                             1f64 - ((self.active_time * (1f64 - sustain_amp)) / decay);
@@ -191,11 +176,7 @@ impl IoModule for Adsr {
                         self.active_time = 0f64;
                         self.adsr_state = AdsrState::Sustain;
                     } else {
-                        let sustain_amp = self
-                            .in_sustain
-                            .read()
-                            .expect("RwLock is poisoned")
-                            .unwrap_or(0.5f64);
+                        let sustain_amp = self.in_sustain.get_value();
 
                         // Decay to sustain amplitude
                         audio_out =
@@ -218,11 +199,8 @@ impl IoModule for Adsr {
                         self.adsr_state = AdsrState::Attack;
                     } else {
                         // Effectively set to zero, but avoiding potential zero division
-                        let release = self
-                            .in_release
-                            .read()
-                            .expect("RwLock is poisoned")
-                            .unwrap_or(clock.time_delta);
+                        let release = self.in_release.get_value();
+
                         // Decay to zero
                         if self.active_time >= release {
                             self.active_time = 0f64;
@@ -240,8 +218,7 @@ impl IoModule for Adsr {
             // insignificant value
             self.active_time += clock.time_delta;
 
-            let mut value = self.out_audio_out.write().expect("RwLock is poisoned");
-            *value = Some(audio_out);
+            self.out_audio_out.set_value(audio_out);
         }
     }
 
@@ -259,34 +236,30 @@ impl IoModule for Adsr {
     }
 
     /// Return a reference to one of the module's input ports
-    fn get_in_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn has_port_with_id(&self, port_id: &str) -> bool {
         match port_id {
-            "audio_in" => Some(self.in_audio.clone()),
-            "trigger" => Some(self.in_trigger.clone()),
-            "attack" => Some(self.in_attack.clone()),
-            "decay" => Some(self.in_decay.clone()),
-            "sustain" => Some(self.in_sustain.clone()),
-            "release" => Some(self.in_release.clone()),
-            _ => None,
+            "audio_in" | "trigger" | "attack"
+                | "decay" | "sustain" | "release" => true,
+            _ => false,
         }
     }
 
-    fn get_out_port_ref(&self, port_id: &str) -> Option<IoPort> {
+    fn get_out_port_ref(&self, port_id: &str) -> Option<&OutPort> {
         match port_id {
-            "audio_out" => Some(self.out_audio_out.clone()),
+            "audio_out" => Some(&self.out_audio_out),
             _ => None,
         }
     }
 
     /// Set the value of a module's input port
-    fn set_in_port(&mut self, port_id: &str, out_port: IoPort) -> PortResult<String> {
+    fn set_in_port(&mut self, port_id: &str, out_port_ref: Weak<RwLock<Option<SampleType>>>) -> PortResult<String> {
         match port_id {
-            "audio_in" => self.in_audio = out_port,
-            "trigger" => self.in_trigger = out_port,
-            "attack" => self.in_attack = out_port,
-            "decay" => self.in_decay = out_port,
-            "sustain" => self.in_sustain = out_port,
-            "release" => self.in_release = out_port,
+            "audio_in" => self.in_audio_in.set_value(out_port_ref),
+            "trigger" => self.in_trigger.set_value(out_port_ref),
+            "attack" => self.in_attack.set_value(out_port_ref),
+            "decay" => self.in_decay.set_value(out_port_ref),
+            "sustain" => self.in_sustain.set_value(out_port_ref),
+            "release" => self.in_release.set_value(out_port_ref),
             _ => return Err(PortNotFoundError),
         }
 
