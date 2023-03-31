@@ -128,77 +128,50 @@ impl Rack {
             }
         }
 
-        let in_module = if self.modules.contains_key(in_module_id) {
-            self.modules.remove(in_module_id).ok_or(ModuleNotFoundError)
-        } else {
-            println!("Module {} does not exist", in_module_id);
-            Err(ModuleNotFoundError)
-        }?;
-
-        let out_module = match self.modules.get_mut(out_module_id) {
-            Some(module) => Ok::<_, ModuleNotFoundError>(module),
+        // Get output module and port references
+        let (out_module, out_port) = match self.modules.get(out_module_id) {
+            Some(module) => {
+                let out_module = module.lock().expect("Mutex lock is poisoned");
+                match out_module.get_out_port_ref(out_port_id) {
+                    Some(port) => (module, port.get_ref()),
+                    None => return Err(Box::new(PortNotFoundError)),
+                }
+            }
             None => {
-                // Add previously removed module back before failure
-                println!("Reinserting module after failure");
-                self.modules.insert(String::from(in_module_id), in_module);
                 println!("Module {} does not exist", out_module_id);
                 return Err(Box::new(ModuleNotFoundError));
             }
-        }?;
-
-        let port_id = {
-            out_module
-                .lock()
-                .expect("Mutex lock is poisoned")
-                .get_out_port_ref(out_port_id)
         };
 
-        let out_port = match port_id {
-            Some(out_port) => out_port,
+
+        // Attach output port to input port and get input module reference
+        let in_module = match self.modules.get(in_module_id) {
+            Some(module) => {
+                let mut in_module = module.lock().expect("Mutex lock is poisoned");
+
+                if in_module.has_port_with_id(in_port_id) {
+                    in_module.set_in_port(in_port_id, out_port)?;
+                    module
+                } else {
+                    return Err(Box::new(ModuleNotFoundError));
+                }
+            }
             None => {
-                self.modules.insert(String::from(in_module_id), in_module);
-                println!(
-                    "Module {} does not have a port {}",
-                    out_module_id, out_port_id
-                );
+                println!("Module {} does not exist", out_module_id);
                 return Err(Box::new(ModuleNotFoundError));
             }
         };
 
-        // Only connect to existing port, in order to avoid mistakes
-        // Note: with this, older connections to the port are automatically disconnected
-        //       it's possible that extra handling will be required here
-        let port_id = {
-            in_module
-                .lock()
-                .expect("Mutex lock is poisoned")
-                .get_in_port_ref(in_port_id)
-        };
-
-        if port_id.is_some() {
-            in_module
-                .lock()
-                .expect("Mutex lock is poisoned")
-                .set_in_port(in_port_id, out_port)?;
-        } else {
-            // Add previously removed module back before failure
-            self.modules.insert(String::from(in_module_id), in_module);
-            return Err(Box::new(ModuleNotFoundError));
-        }
-
         // Set module order
-        let out_module_order = {
-            out_module
-                .lock()
-                .expect("Mutex lock is poisoned")
-                .get_module_order()
-        };
-        let in_module_order = {
-            in_module
-                .lock()
-                .expect("Mutex lock is poisoned")
-                .get_module_order()
-        };
+        let out_module_order = out_module
+            .lock()
+            .expect("Mutex lock is poisoned")
+            .get_module_order();
+
+        let in_module_order = in_module
+            .lock()
+            .expect("Mutex lock is poisoned")
+            .get_module_order();
 
         match (out_module_order, in_module_order) {
             (None, None) => {
@@ -290,9 +263,6 @@ impl Rack {
             // and insert the item onto the Vec
             .push(in_module.clone());
 
-        // Add back previously removed module, with updated ports
-        self.modules.insert(String::from(in_module_id), in_module);
-
         Ok(format!(
             "connected module {} -> {} to {} -> {}",
             out_module_id, out_port_id, in_module_id, in_port_id
@@ -312,7 +282,7 @@ impl Rack {
         module
             .lock()
             .expect("Mutex lock is poisoned")
-            .set_in_port(port_id, Arc::new(RwLock::new(None)))?;
+            .set_in_port(port_id, Weak::new())?;
 
         Ok(format!(
             "disconnected {} from module {}",
@@ -328,15 +298,16 @@ impl Rack {
         in_port_id: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let control = match self.controls.get(ctrl_id) {
-            Some(control) => control,
+            Some(control) => control.to_owned(),
             None => return Err(Box::new(ModuleNotFoundError)),
         };
 
-        let ctrl_port = match control
+        let ctrl_port = control
             .lock()
             .expect("Mutex lock is poisoned")
-            .get_port_reference(ctrl_port_id)
-        {
+            .get_port_reference(ctrl_port_id);
+
+        let ctrl_port = match ctrl_port {
             Some(port) => port,
             None => return Err(Box::new(PortNotFoundError)),
         };
