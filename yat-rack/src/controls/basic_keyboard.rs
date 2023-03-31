@@ -1,6 +1,7 @@
 use std::sync::{Weak, RwLock};
 
 use crate::controls::control::Control;
+use crate::midi::message_status::MessageStatus;
 use crate::types::SampleType;
 use crate::out_port::OutPort;
 
@@ -135,6 +136,46 @@ impl Control for BasicKeyboard {
             }
             '*' => {
                 self.set_value("gate", 0f64);
+            }
+            _ => {}
+        }
+    }
+
+    fn recv_midi(&self, message: &[u8]) {
+        let msg_type: MessageStatus = match message[0].try_into() {
+            Ok(status) => status,
+            Err(_) => return,
+        };
+
+        let (note, velocity) = match msg_type {
+            MessageStatus::NoteOff
+                | MessageStatus::NoteOn
+                | MessageStatus::KeyPressure => (message[1], message[2]),
+            _ => return,
+        };
+
+        // Formula for converting MIDI notes to corresponding frequency
+        let freq = 440f64 * f64::powf(2f64, ((note as f64) - 69f64) / 12f64);
+
+        // Convert note velocity to value between 0 and 1
+        let velocity = (velocity as f64) / 127f64;
+
+        match msg_type {
+            MessageStatus::NoteOff => {
+                self.set_value("velocity", 0f64);
+                self.set_value("pitch", freq);
+                self.set_value("gate", 0f64);
+
+            }
+            MessageStatus::NoteOn => {
+                self.set_value("velocity", velocity);
+                self.set_value("pitch", freq);
+                self.set_value("gate", 1f64);
+            }
+            MessageStatus::KeyPressure => {
+                self.set_value("velocity", velocity);
+                self.set_value("pitch", freq);
+                self.set_value("gate", 1f64);
             }
             _ => {}
         }

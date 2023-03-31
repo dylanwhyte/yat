@@ -16,4 +16,8 @@ pub trait Control {
     /// Receive and handle a control key. This allows the control to listen for commands and update
     /// it's output accordingly (somewhat akin to a module's processing function)
     fn recv_control_key(&self, key: char);
+
+    fn recv_midi(&self, _message: &[u8]) {
+        unimplemented!();
+    }
 }

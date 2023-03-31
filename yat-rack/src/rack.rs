@@ -57,6 +57,15 @@ impl Rack {
         }
     }
 
+    pub fn recv_midi(&self, _stamp: u64, message: &[u8]) {
+        if let Some(control) = &self.focussed_control {
+            control
+                .lock()
+                .expect("Mutex lock is poisoned")
+                .recv_midi(message);
+        }
+    }
+
     /// Add a new module to the Rack
     pub fn add_module(
         &mut self,

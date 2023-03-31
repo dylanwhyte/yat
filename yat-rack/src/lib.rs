@@ -1,6 +1,7 @@
 pub mod clock;
 pub mod controls;
 pub mod in_port;
+pub mod midi;
 pub mod modules;
 pub mod out_port;
 pub mod rack;
