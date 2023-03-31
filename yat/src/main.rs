@@ -1,3 +1,6 @@
+use midir::{MidiInput, Ignore};
+use std::io::{stdin, stdout, Write};
+
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -112,11 +115,9 @@ impl App {
 
         // Add the audio_out module by defualt
         // TODO: Make sure there is only one of these for now
-        {
-            rack.lock()
-                .unwrap()
-                .add_module(Arc::new(Mutex::new(audio_out)));
-        }
+        rack.lock()
+            .unwrap()
+            .add_module(Arc::new(Mutex::new(audio_out))).unwrap();
 
         // Testing setup:
         // Setup moduels
@@ -303,6 +304,8 @@ impl App {
         }
 
         App::setup_audio_thread(audio_rx);
+        // TODO handle errors and allow selection of interface (config screen??)
+        self.setup_midi_thread().unwrap();
 
         let c_rack_ref = Arc::clone(&rack);
         let s_rack_ref = Arc::clone(&rack);
@@ -694,6 +697,27 @@ impl App {
             .style(Style::default())
             .block(Block::default().borders(Borders::ALL).title("Modules"));
         f.render_widget(module_list, bottom_chunks[2]);
+    }
+
+    fn setup_midi_thread(&self) -> Result<(), Box<dyn Error>> {
+        let midi_rack = self.rack.clone();
+        thread::spawn(move || {
+            let mut midi_in = MidiInput::new("midir reading input").unwrap();
+            midi_in.ignore(Ignore::None);
+
+            // Get an input port (read from console if multiple are available)
+            let in_ports = midi_in.ports();
+            let in_port = in_ports.get(1).unwrap();
+
+            // _conn_in needs to be a named parameter, because it needs to be kept alive until the end of the scope
+            let _conn_in = midi_in.connect(in_port, "midir-read-input", move |stamp, message, _| {
+                midi_rack.lock().expect("mutex poisoned").recv_midi(stamp, message);
+            }, ()).unwrap();
+
+            thread::park();
+        });
+
+        Ok(())
     }
 
     fn setup_audio_thread(audio_rx: Receiver<SampleType>) {
