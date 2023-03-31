@@ -154,7 +154,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("amp", "value", Some(1f64))
+            .set_ctrl_value("amp", "value", 1f64)
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -165,7 +165,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("attack", "value", Some(3f64))
+            .set_ctrl_value("attack", "value", 3f64)
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -176,7 +176,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .set_ctrl_value("sustain", "value", Some(0.4f64))
+            .set_ctrl_value("sustain", "value", 0.4f64)
         {
             Ok(res) => self.messages.push(res),
             Err(e) => self
@@ -466,7 +466,7 @@ impl App {
 
                                                 // TODO: Add proper error handling
                                                 let value =
-                                                    split_command.next().unwrap().parse().ok();
+                                                    split_command.next().unwrap().parse().ok().unwrap_or(0f64);
 
                                                 // TODO: Add proper error handling
                                                 match c_rack_ref
