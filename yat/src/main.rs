@@ -1,5 +1,4 @@
 use midir::{MidiInput, Ignore};
-use std::io::{stdin, stdout, Write};
 
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
@@ -200,7 +199,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .connect_modules("keyboard", "gate", "adsr", "trigger")
+            .connect_modules("keyboard", "gate", "adsr", "gate")
         {
             Ok(message) => self.messages.push(message),
             Err(e) => self
@@ -211,7 +210,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .connect_modules("osc", "audio_out", "adsr", "audio_in")
+            .connect_modules("adsr", "signal_out", "osc", "amp")
         {
             Ok(message) => self.messages.push(message),
             Err(e) => self
@@ -222,18 +221,7 @@ impl App {
         match rack
             .lock()
             .unwrap()
-            .connect_modules("adsr", "audio_out", "audio_out", "signal_in")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("amp", "value", "osc", "amp")
+            .connect_modules("osc", "audio_out", "audio_out", "signal_in")
         {
             Ok(message) => self.messages.push(message),
             Err(e) => self
