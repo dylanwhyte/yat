@@ -22,6 +22,14 @@ impl OutPort {
         }
     }
 
+    pub fn get_label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn set_label(&mut self, new_label: String) {
+        self.label = new_label;
+    }
+
     pub fn set_value(&self, new: f64) {
         let mut value = self.value.write().expect("RwLock is poisoned");
         *value = Some(new);

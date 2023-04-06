@@ -38,6 +38,14 @@ impl InPort {
         }
     }
 
+    pub fn get_label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn set_label(&mut self, new_label: String) {
+        self.label = new_label;
+    }
+
     pub fn get_value(&self) -> f64 {
         match self.value.upgrade() {
             Some(v) => {
@@ -50,5 +58,9 @@ impl InPort {
 
     pub fn set_value(&mut self, value: Weak<RwLock<Option<f64>>>) {
         self.value = value;
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.value.strong_count() > 0
     }
 }
