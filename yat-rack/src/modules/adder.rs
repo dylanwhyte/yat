@@ -28,11 +28,11 @@ impl Adder {
     /// Create a new, unordered IoModule
     pub fn new(id: String) -> Self {
         let order = None;
-        let input_ports = vec!["in_a".to_string(), "in_b".to_string()];
+        let input_ports = vec!["a".to_string(), "b".to_string()];
         let output_ports = vec!["result".to_string()];
 
         let in_a = InPort::new("a".into(), SampleType::MIN, SampleType::MAX, 0.0);
-        let in_b = InPort::new("a".into(), SampleType::MIN, SampleType::MAX, 0.0);
+        let in_b = InPort::new("b".into(), SampleType::MIN, SampleType::MAX, 0.0);
         let out_sum = OutPort::new("sum".into());
 
         Self {
