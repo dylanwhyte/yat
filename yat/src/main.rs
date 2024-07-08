@@ -1,11 +1,8 @@
 use midir::{MidiInput, Ignore};
 
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Sample, SampleFormat};
 
 use crossterm::event::KeyEventKind;
 use crossterm::{
@@ -30,7 +27,8 @@ use unicode_width::UnicodeWidthStr;
 
 use yat_rack::modules::output::Output;
 use yat_rack::rack::Rack;
-use yat_rack::types::{SampleType, SAMPLE_RATE};
+
+mod audio_server;
 
 fn main() -> Result<(), io::Error> {
     // setup terminal
@@ -118,180 +116,7 @@ impl App {
             .unwrap()
             .add_module(Arc::new(Mutex::new(audio_out))).unwrap();
 
-        // Testing setup:
-        // Setup moduels
-        match rack.lock().unwrap().add_module_type("osc", "osc") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        match rack.lock().unwrap().add_module_type("keyboard", "keyboard") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        match rack.lock().unwrap().add_module_type("adsr", "adsr") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        match rack.lock().unwrap().add_module_type("control", "amp") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        match rack.lock().unwrap().add_module_type("control", "attack") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        match rack.lock().unwrap().add_module_type("control", "sustain") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self.messages.push(format!("Failed to add module: {}", e)),
-        }
-
-        // Set control port values
-        match rack
-            .lock()
-            .unwrap()
-            .set_ctrl_value("amp", "value", 1f64)
-        {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to update control: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .set_ctrl_value("attack", "value", 3f64)
-        {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to update control: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .set_ctrl_value("sustain", "value", 0.4f64)
-        {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to update control: {}", e)),
-        }
-
-        // Connect modules
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("keyboard", "pitch", "osc", "freq")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("keyboard", "gate", "adsr", "gate")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("adsr", "signal_out", "osc", "amp")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("osc", "audio_out", "audio_out", "signal_in")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("attack", "value", "adsr", "attack")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("attack", "value", "adsr", "decay")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("attack", "value", "adsr", "release")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        match rack
-            .lock()
-            .unwrap()
-            .connect_modules("sustain", "value", "adsr", "sustain")
-        {
-            Ok(message) => self.messages.push(message),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to connect modules: {}", e)),
-        }
-
-        //match rack.lock().unwrap().connect_modules(
-        //out_module_id,
-        //out_port_id,
-        //in_module_id,
-        //in_port_id
-        //) {
-        //Ok(message) => self.messages.push(message),
-        //Err(e) => self.messages.push(format!("Failed to connect modules: {}", e)),
-        //}
-
-        // Focus keyboard
-        match rack.lock().unwrap().set_focus_control("keyboard") {
-            Ok(res) => self.messages.push(res),
-            Err(e) => self
-                .messages
-                .push(format!("Failed to focus control: {}", e)),
-        }
-
-        App::setup_audio_thread(audio_rx);
+        audio_server::setup_audio_thread(audio_rx);
         // TODO handle errors and allow selection of interface (config screen??)
         self.setup_midi_thread().unwrap();
 
@@ -300,7 +125,6 @@ impl App {
 
         let (quit_tx, quit_rx) = mpsc::sync_channel(1);
         thread::scope(|c_scope| {
-            //let running_pair = Arc::clone(&s_rack_ref.lock().unwrap().running);
             c_scope.spawn(move || {
                 // TODO: Use std::sync::Convar to actually block CPU
                 loop {
@@ -351,7 +175,6 @@ impl App {
                                         }
                                         KeyCode::Esc => {
                                             self.input_mode = InputMode::Normal;
-                                            //*exit_control_clone.lock().unwrap().get_mut() = true;
                                         }
                                         _ => {}
                                     }
@@ -378,156 +201,6 @@ impl App {
                                             c_scope.spawn(|| c_rack_ref.lock().unwrap().stop());
                                             quit_tx.send(true).unwrap();
                                             return Ok(());
-                                        } else if self.commands.last().unwrap() == "stop" {
-                                            self.messages.push("stopping...\n".into());
-                                            c_scope.spawn(|| c_rack_ref.lock().unwrap().stop());
-                                        } else if self.commands.last().unwrap() == "run" {
-                                            self.messages.push("running...\n".into());
-                                            c_scope.spawn(|| c_rack_ref.lock().unwrap().run());
-                                        } else if self.commands.last().unwrap().starts_with("add") {
-                                            let mut split_command =
-                                                self.commands.last().unwrap().split(' ');
-                                            if self.commands.last().unwrap().split(' ').count() != 3
-                                            {
-                                                self.messages.push(
-                                                    "usage: add <module_type> <module_id>\n".into(),
-                                                );
-                                            } else {
-                                                let module_type = split_command.nth(1).unwrap();
-                                                let module_id = split_command.next().unwrap();
-                                                match c_rack_ref
-                                                    .lock()
-                                                    .unwrap()
-                                                    .add_module_type(module_type, module_id)
-                                                {
-                                                    Ok(res) => self.messages.push(res),
-                                                    Err(e) => self.messages.push(format!(
-                                                        "Failed to add {} {}: {}",
-                                                        module_type, module_id, e
-                                                    )),
-                                                }
-                                            }
-                                        } else if self
-                                            .commands
-                                            .last()
-                                            .unwrap()
-                                            .starts_with("connect")
-                                        {
-                                            let mut split_command =
-                                                self.commands.last().unwrap().split(' ');
-                                            if self.commands.last().unwrap().split(' ').count() == 5
-                                            {
-                                                let out_module_id = split_command.nth(1).unwrap();
-                                                let out_port_id = split_command.next().unwrap();
-                                                let in_module_id = split_command.next().unwrap();
-                                                let in_port_id = split_command.next().unwrap();
-                                                match c_rack_ref.lock().unwrap().connect_modules(
-                                                    out_module_id,
-                                                    out_port_id,
-                                                    in_module_id,
-                                                    in_port_id,
-                                                ) {
-                                                    Ok(message) => self.messages.push(message),
-                                                    Err(e) => self.messages.push(format!(
-                                                        "Failed to connect modules: {}",
-                                                        e
-                                                    )),
-                                                }
-                                                //} else if self.commands.last().unwrap().split(' ').count() == 4 {
-                                                //// TODO: Add proper error handling
-                                                //let ctrl_id = split_command.nth(1).unwrap();
-                                                //let in_module_id = split_command.next().unwrap();
-                                                //let in_port_id = split_command.next().unwrap();
-                                                //c_rack_ref.lock().unwrap().connect_ctrl(ctrl_id, in_module_id, in_port_id);
-                                            } else {
-                                                self.messages.push("usagee: connect <out_module_id> <out_port_id> <in_module> <in_module_id>\n".into());
-                                            }
-                                        } else if self.commands.last().unwrap().starts_with("set") {
-                                            let mut split_command =
-                                                self.commands.last().unwrap().split(' ');
-                                            if self.commands.last().unwrap().split(' ').count() != 4
-                                            {
-                                                self.messages.push(
-                                                    "usage: set <ctrl_id> <port_id> <value>\n"
-                                                        .into(),
-                                                );
-                                            } else {
-                                                let ctrl_id = split_command.nth(1).unwrap();
-                                                let port_id = split_command.next().unwrap();
-
-                                                // TODO: Add proper error handling
-                                                let value =
-                                                    split_command.next().unwrap().parse().ok().unwrap_or(0f64);
-
-                                                // TODO: Add proper error handling
-                                                match c_rack_ref
-                                                    .lock()
-                                                    .unwrap()
-                                                    .set_ctrl_value(ctrl_id, port_id, value)
-                                                {
-                                                    Ok(res) => self.messages.push(res),
-                                                    Err(e) => self.messages.push(format!(
-                                                        "Failed to update control: {}",
-                                                        e
-                                                    )),
-                                                }
-                                            }
-                                        } else if self.commands.last().unwrap().starts_with("focus")
-                                        {
-                                            let mut split_command =
-                                                self.commands.last().unwrap().split(' ');
-
-                                            if self.commands.last().unwrap().split(' ').count() != 2
-                                            {
-                                                self.messages
-                                                    .push("usage: focus <ctrl_id>\n".into());
-                                            } else {
-                                                let ctrl_id = split_command.nth(1).unwrap();
-
-                                                match c_rack_ref
-                                                    .lock()
-                                                    .unwrap()
-                                                    .set_focus_control(ctrl_id)
-                                                {
-                                                    Ok(res) => self.messages.push(res),
-                                                    Err(e) => self.messages.push(format!(
-                                                        "Failed to focus control: {}",
-                                                        e
-                                                    )),
-                                                }
-                                            }
-                                        } else if self.commands.last().unwrap().starts_with("print")
-                                        {
-                                            if self.commands.last().unwrap().split(' ').count() == 2
-                                            {
-                                                match self.commands.last().unwrap().split(' ').nth(1).unwrap() {
-                                                    "modules" => self.messages.push(c_rack_ref.lock().unwrap().print_modules()),
-                                                    "module-order" => self.messages.push(c_rack_ref.lock().unwrap().print_module_order()),
-                                                    "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(None)),
-                                                    _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
-                                                }
-                                            } else if self
-                                                .commands
-                                                .last()
-                                                .unwrap()
-                                                .split(' ')
-                                                .count()
-                                                == 3
-                                            {
-                                                match self.commands.last().unwrap().split(' ').nth(1).unwrap() {
-                                                    "ports" => self.messages.push(c_rack_ref.lock().unwrap().print_ports(
-                                                            Some(self.commands.last().unwrap().split(' ').nth(2).unwrap()))),
-                                                    _ => self.messages.push("usage: print <modules|module-order|ports [module_id]>".into()),
-                                                }
-                                            } else {
-                                                self.messages.push("usage: print <modules|module-order|ports [module_id]>\n".into());
-                                            }
-                                        } else {
-                                            let mut message = "".to_string();
-                                            message.push_str("Unknown command: ");
-                                            message.push_str(self.commands.last().unwrap());
-                                            message.push('\n');
-                                            self.messages.push(message);
                                         }
                                     }
                                     KeyCode::Char(c) => {
@@ -695,79 +368,17 @@ impl App {
 
             // Get an input port (read from console if multiple are available)
             let in_ports = midi_in.ports();
-            let in_port = in_ports.get(1).unwrap();
+            let in_port = in_ports.get(1);
 
-            // _conn_in needs to be a named parameter, because it needs to be kept alive until the end of the scope
-            let _conn_in = midi_in.connect(in_port, "midir-read-input", move |stamp, message, _| {
-                midi_rack.lock().expect("mutex poisoned").recv_midi(stamp, message);
-            }, ()).unwrap();
+            if let Some(in_port) = in_port {
+                // _conn_in needs to be a named parameter, because it needs to be kept alive until the end of the scope
+                let _conn_in = midi_in.connect(in_port, "midir-read-input", move |stamp, message, _| {
+                    midi_rack.lock().expect("mutex poisoned").recv_midi(stamp, message);
+                }, ()).unwrap();
 
-            thread::park();
-        });
-
-        Ok(())
-    }
-
-    fn setup_audio_thread(audio_rx: Receiver<SampleType>) {
-        //-> IoPort {
-
-        let _ = thread::spawn(move || {
-            let host = cpal::default_host();
-            let device = host.default_output_device().expect("no device available");
-
-            let channels = 2u16;
-            let sample_rate = cpal::SampleRate(SAMPLE_RATE as u32);
-            let suported_buffer_size = cpal::SupportedBufferSize::Unknown;
-            let sample_format = cpal::SampleFormat::F32;
-
-            let config = cpal::SupportedStreamConfig::new(
-                channels,
-                sample_rate,
-                suported_buffer_size,
-                sample_format
-                );
-
-            match config.sample_format() {
-                SampleFormat::F32 => App::run::<f32>(&device, &config.into(), audio_rx).unwrap(),
-                SampleFormat::I16 => App::run::<i16>(&device, &config.into(), audio_rx).unwrap(),
-                SampleFormat::U16 => App::run::<u16>(&device, &config.into(), audio_rx).unwrap(),
+                thread::park();
             }
         });
-    }
-
-    // Build output stream and play audio
-    fn run<T: Sample>(
-        device: &cpal::Device,
-        config: &cpal::StreamConfig,
-        audio_rx: Receiver<SampleType>,
-    ) -> Result<(), Box<dyn Error>> {
-        let channels = config.channels as usize;
-
-        let err_fn = |err| eprintln!("an error occurred on the stream: {}", err);
-
-        // Build an output stream
-        let stream = device.build_output_stream(
-            config,
-            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                for frame in data.chunks_mut(channels) {
-                    // NOTE: Converting from the rack's 64-bit floats to 32-bit for samples
-                    let next_sample: f32 = match audio_rx.recv() {
-                        Ok(sample) => sample as f32,
-                        Err(_) => break,
-                    };
-                    let value: T = cpal::Sample::from::<f32>(&next_sample);
-
-                    for sample in frame.iter_mut() {
-                        *sample = value;
-                    }
-                }
-            },
-            err_fn,
-        )?;
-
-        stream.play()?;
-
-        std::thread::park();
 
         Ok(())
     }
