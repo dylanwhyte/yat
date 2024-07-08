@@ -9,11 +9,11 @@ pub struct InPort {
 
     /// This is a suggested lower bound on the port's value.
     /// A user is free to ignore this.
-    low_range: f64,
+    lower_range: f64,
 
     /// This is a suggested upper bound on the port's value.
     /// A user is free to ignore this.
-    up_range: f64,
+    upper_range: f64,
 
     /// A default value, in case it's not connected, i.e., it's value is None
     default: f64,
@@ -22,8 +22,8 @@ pub struct InPort {
 impl InPort {
     pub fn new(
         label: String,
-        low_range: f64,
-        up_range: f64,
+        lower_range: f64,
+        upper_range: f64,
         default: f64,
         ) -> Self
     {
@@ -32,8 +32,8 @@ impl InPort {
         Self {
             label,
             value,
-            low_range,
-            up_range,
+            lower_range,
+            upper_range,
             default,
         }
     }
@@ -58,6 +58,22 @@ impl InPort {
 
     pub fn set_value(&mut self, value: Weak<RwLock<Option<f64>>>) {
         self.value = value;
+    }
+
+    pub fn get_lower_range(&self) -> f64 {
+        self.lower_range
+    }
+
+    pub fn set_lower_range(&mut self, new_lower_range: f64) {
+        self.lower_range = new_lower_range;
+    }
+
+    pub fn get_upper_range(&self) -> f64 {
+        self.upper_range
+    }
+
+    pub fn set_upper_range(&mut self, new_upper_range: f64) {
+        self.upper_range = new_upper_range;
     }
 
     pub fn is_connected(&self) -> bool {
