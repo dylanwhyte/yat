@@ -6,3 +6,4 @@ pub mod modules;
 pub mod out_port;
 pub mod rack;
 pub mod types;
+mod event;

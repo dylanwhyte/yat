@@ -2,12 +2,16 @@ use hashbrown::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+use std::thread;
 
 use crate::clock::Clock;
 use crate::controls::basic_keyboard::BasicKeyboard;
 use crate::controls::button::Button;
 use crate::controls::control::Control;
 use crate::controls::control_knob::ControlKnob;
+use crate::event::Event;
 use crate::modules::adsr::Adsr;
 use crate::modules::io_module::IoModule;
 use crate::modules::oscillator::Oscillator;
@@ -29,6 +33,10 @@ pub struct Rack {
     /// Ordered modules for sequential processing
     module_chain: HashMap<u64, Vec<Arc<Mutex<dyn IoModule + Send + Sync>>>>,
 
+    msg_queue: Option<mpsc::Sender<String>>,
+
+    event_queue: Option<mpsc::Receiver<Event>>,
+
     /// The Rack's clock keeps track of timing. This is passed to modules
     /// whose output rely on time
     pub clock: Arc<RwLock<Clock>>,
@@ -47,15 +55,65 @@ impl Rack {
         let clock = Arc::new(RwLock::new(Clock::new()));
         let running = AtomicBool::new(true);
 
-        Self {
+        let rack = Self {
             modules,
             controls,
             focussed_control,
             module_chain,
+            msg_queue: None,
+            event_queue: None,
             clock,
             running,
+        };
+
+        rack
+    }
+
+    // TODO: Event logic should be handled in the Event server
+    pub fn get_msg_sender(&self) -> Option<Sender<String>> {
+        self.msg_queue.clone()
+    }
+
+    pub fn recv_msg(&mut self) {
+        thread::scope(|c_scope| {
+            c_scope.spawn(move || {
+                if let Some(queue) = &self.event_queue {
+                    let event = queue.recv().unwrap();
+                    self.parse_event(event);
+                };
+            });
+        });
+    }
+
+    fn write_msg_queue(&mut self, msg: String) {
+        if let Some(queue) = &self.msg_queue {
+            queue.send(msg).expect("TODO: panic message");
         }
     }
+
+    fn parse_event(&mut self, msg: Event) {
+        let mut response = String::new();
+        match msg {
+            Event::Command(cmd, args) => {
+                // Lets say this is for info
+                if cmd == "info" {
+                    match args.get("data").expect("data for info not specified").as_str() {
+                        "ports" => response = self.print_ports(None),
+                        "modules" => response = self.print_modules(),
+                        "connections" => response = self.print_connection(),
+                        "module_order" => response = self.print_module_order(),
+                        _ => response = String::from("Unknow command"),
+                    }
+                }
+            }
+            Event::Midi(_status, _data1, _data2) => {
+                // TODO: Handle MIDI
+                response = String::from("MIDI not implemented");
+            }
+        };
+        self.write_msg_queue(response);
+    }
+    // -------------------------------------------------
 
     pub fn recv_midi(&self, _stamp: u64, message: &[u8]) {
         if let Some(control) = &self.focussed_control {
@@ -80,6 +138,7 @@ impl Rack {
         Ok(format!("Added module: {}", module_id))
     }
 
+    // TODO: Remove function; The Rack only needs to know about IoModule and Controls
     pub fn add_module_type(
         &mut self,
         module_type: &str,
@@ -119,6 +178,7 @@ impl Rack {
 
         Ok(format!("Add {} with id {}", module_type, module_id))
     }
+    // ----------------------------------------------------------------------
 
     /// Conect two modules via the given ports
     pub fn connect_modules(
@@ -128,8 +188,6 @@ impl Rack {
         in_module_id: &str,
         in_port_id: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        // Check for presence of the key and remove the module from the hash map if it exists
-        // This is the only way I see to have mutible references to two elements of the HashMap
         if self.controls.contains_key(out_module_id) {
             match self.connect_ctrl(out_module_id, out_port_id, in_module_id, in_port_id) {
                 Ok(res) => return Ok(res),
@@ -137,6 +195,9 @@ impl Rack {
             }
         }
 
+        // TODO: Is there a more sane way to do this?
+        // Check for presence of the key and remove the module from the hash map if it exists
+        // This is the only way I see to have mutible references to two elements of the HashMap
         // Get output module and port references
         let (out_module, out_port) = match self.modules.get(out_module_id) {
             Some(module) => {
@@ -437,8 +498,9 @@ impl Rack {
     }
 
     /// Print the connections between a Rack's items
-    pub fn print_connection(&self, _module_a: &str, _module_b: &str) {
+    pub fn print_connection(&self) -> String {
         // TODO
+        String::from("Not implemented")
     }
 
     pub fn print_module_order(&self) -> String {
@@ -512,6 +574,8 @@ impl Rack {
         )
     }
 
+    // TODO: Should this be handled in Rack and if so, would it be more appropriate
+    //       to rename to activate/deactivate?
     pub fn run(&mut self) {
         self.running.store(true, Relaxed);
     }
@@ -519,6 +583,7 @@ impl Rack {
     pub fn stop(&mut self) {
         self.running.store(false, Relaxed);
     }
+    // ----------------
 }
 
 impl Default for Rack {

@@ -10,3 +10,4 @@ edition = "2021"
 
 [dependencies]
 hashbrown = "0.13.2"
+libloading = "0.8.4"
